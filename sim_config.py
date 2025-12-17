@@ -13,8 +13,9 @@ class SimulationConfig:
     n_ens: int = 3              # ensemble size
 
     # --------- Physical ---------
-    L_factor: float = 0.5       # L = L_factor * N = large spatial scale ?
-    Lx = 2                      # domain size
+    Lx: float = 2                 # domain size
+    L_LS: float = Lx/2            # large spatial scale
+
     dim: float = 2.0
     c2: float = 0.1
     rho_s: float = 6.0
@@ -28,11 +29,10 @@ class SimulationConfig:
 def build_derived_quantities(cfg: SimulationConfig):
     N = 2 ** cfg.n_order
     PN = N//2                                      # aliased wavevector index
-    L = cfg.L_factor * N
 
     z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
     theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1 # spectrum slope of the bidirectionnal spatial spectrum
-    K_LS = 2 * np.pi / L                           # large-scale wavenumber
+    K_LS = 2 * np.pi / cfg.L_LS                           # large-scale wavenumber
     epsilon_reg = 1.0e-6 * cfg.Lx / N              # spatial regularisation
 
     np.random.seed(0)
