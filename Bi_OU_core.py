@@ -38,6 +38,7 @@ def run_simulation(cfg, derived):
 
 def noise(cfg, derived):
     N = derived["N"]
+    PN = derived["PN"]
     n_ens = derived["n_ens"]
 
     xi = np.random.randn(N, N, n_ens)
@@ -45,6 +46,10 @@ def noise(cfg, derived):
     B_hat = (xi + 1j * eta) / np.sqrt(2)
 
     # B_hat = np.fft.fft2(rng.normal(size=(N, N, n_ens)), axes=(0,1)) / N**2
+
+    B_hat[0, 0] = 0
+    B_hat[PN, :] = 0
+    B_hat[:, PN] = 0
 
     return B_hat
 
