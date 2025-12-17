@@ -66,14 +66,13 @@ def build_derived_quantities(cfg: SimulationConfig):
     exp_e = np.exp(-cfg.Delta_t / tau_e)
     noise_e = np.sqrt(1 - exp_e**2)
 
-    mycorr = (cfg.c2**2) * np.log(L / RegulNorm(normX_per, epsilon_reg))
+    mycorr = (cfg.c2**2) * np.log(cfg.Lx / RegulNorm(normX_per, epsilon_reg))
     S2 = np.fft.fft2(mycorr)
 
     return {
         "N": N,
         "PN": PN,
         "n_ens": cfg.n_ens,
-        "L": L,
         "KX": KX,
         "KY": KY,
         "K": K,
