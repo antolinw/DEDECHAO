@@ -30,6 +30,11 @@ def build_derived_quantities(cfg: SimulationConfig):
     PN = N//2                                      # aliased wavevector index
     L = cfg.L_factor * N
 
+    z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
+    theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1 # spectrum slope of the bidirectionnal spatial spectrum
+    K_LS = 2 * np.pi / L                           # large-scale wavenumber
+    epsilon = L / N                                # spatial regularisation ?
+
     # Spatial grid for doubly-periodic image
     x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
     y_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
