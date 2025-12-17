@@ -17,6 +17,8 @@ def run_simulation(cfg, derived, rng=None):
 
     V_x = np.zeros((cfg.N_steps, N, N))
     V_y = np.zeros((cfg.N_steps, N, N))
+    stream = np.zeros((cfg.N_steps, N, N))
+    vort = np.zeros((cfg.N_steps, N, N))
 
     for t in range(cfg.N_steps):
         # ---- OU process for B ----
@@ -73,11 +75,15 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived, rng=None):
     Bepsi_hat = np.fft.fft2(B_real * epsi)
 
     # ---- Velocity ----
+    stream_hat = A * Bepsi_hat
     v_hat_x = 1j * KY * A * Bepsi_hat
     v_hat_y = -1j * KX * A * Bepsi_hat
+    vort_hat = - K**2 * A * Bepsi_hat
 
+    stream = np.fft.ifft2(stream_hat, axes=(0,1)).real
     V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
     V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
+    vort = np.fft.ifft2(vort_hat, axes=(0,1)).real
 
-    return V_x, V_y
+    return V_x, V_y, stream, vort
 
