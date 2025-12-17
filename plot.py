@@ -15,3 +15,9 @@ def plot_surface(field, title="", cmap="viridis"):
     ax.set_title(title)
 
     plt.show()
+
+def plot_img(field, title="", cmap="viridis"):
+    plt.imshow(field)
+    plt.title(title)
+    plt.colorbar()
+    plt.show()
