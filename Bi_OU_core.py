@@ -83,9 +83,9 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
 
     # ---- Velocity ----
     stream_hat = A * Bepsi_hat
-    v_hat_x = 1j * KY * A * Bepsi_hat
-    v_hat_y = -1j * KX * A * Bepsi_hat
-    vort_hat = - K**2 * A * Bepsi_hat
+    v_hat_x = 1j * KY * stream_hat
+    v_hat_y = -1j * KX * stream_hat
+    vort_hat = - K**2 * stream_hat
 
     stream = np.fft.ifft2(stream_hat, axes=(0,1)).real
     V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
