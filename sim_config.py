@@ -25,6 +25,7 @@ class SimulationConfig:
 
 def build_derived_quantities(cfg: SimulationConfig):
     N = 2 ** cfg.n_order
+    PN = N//2                                      # aliased wavevector index
     L = cfg.L_factor * N
 
     z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)
@@ -39,7 +40,11 @@ def build_derived_quantities(cfg: SimulationConfig):
     K = np.sqrt(KX**2 + KY**2)
 
     # Spectrum
-    S = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+    S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+    S1[0, 0] = 0
+    S1[PN, :] = 0
+    S1[:, PN] = 0
+    A = np.sqrt(S1)
 
     # OU timescales
     tau_B = cfg.tau_0B * (1 + K / K_LS) ** (-z)
