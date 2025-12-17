@@ -19,7 +19,12 @@ def run_simulation(cfg, derived, rng=None):
     stream = np.zeros((cfg.N_steps, N, N, n_ens))
     vort = np.zeros((cfg.N_steps, N, N, n_ens))
 
-    for t in range(cfg.N_steps):
+    B_hat = noise(cfg, derived)
+    lepsi_hat =  np.sqrt(S2) * noise(cfg, derived)
+    V_x[0,:,:,:], V_y[0,:,:,:], stream[0,:,:,:], vort[0,:,:,:] \
+        = CMG_velocity(B_hat,lepsi_hat,cfg, derived)
+
+    for t in range(cfg.N_steps-1):
         # ---- OU process for B ----
         B_hat = exp_B * B_hat + noise_B * noise(cfg, derived)
         # ---- OU process for epsilon ----
