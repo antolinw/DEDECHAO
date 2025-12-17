@@ -2,7 +2,7 @@
 import numpy as np
 from dataclasses import dataclass
 
-RegulNorm = lambda x, epsilon: np.sqrt(x**2 + epsilon**2)
+RegulNorm = lambda x, epsilon_reg: np.sqrt(x**2 + epsilon_reg**2)
 
 @dataclass
 class SimulationConfig:
@@ -33,7 +33,7 @@ def build_derived_quantities(cfg: SimulationConfig):
     z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
     theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1 # spectrum slope of the bidirectionnal spatial spectrum
     K_LS = 2 * np.pi / L                           # large-scale wavenumber
-    epsilon = L / N                                # spatial regularisation ?
+    epsilon_reg = 1.0e-6 * cfg.Lx / N              # spatial regularisation
 
     # Spatial grid for doubly-periodic image
     x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
@@ -64,7 +64,7 @@ def build_derived_quantities(cfg: SimulationConfig):
     exp_e = np.exp(-cfg.Delta_t / tau_e)
     noise_e = np.sqrt(1 - exp_e**2)
 
-    mycorr = (cfg.c2**2) * np.log(L / RegulNorm(normX_per, epsilon))
+    mycorr = (cfg.c2**2) * np.log(L / RegulNorm(normX_per, epsilon_reg))
     S2 = np.fft.fft2(mycorr)
 
     return {
