@@ -29,10 +29,11 @@ def build_derived_quantities(cfg: SimulationConfig):
     PN = N//2                                      # aliased wavevector index
     L = cfg.L_factor * N
 
-    z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)
-    theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1
-    K_LS = 2 * np.pi / L
-    epsilon = L / N
+    # Spatial grid for doubly-periodic image
+    x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
+    y_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
+    X_per, Y_per = np.meshgrid(x_per, y_per, indexing="ij")
+    normX_per = np.sqrt(X_per**2 + Y_per**2)
 
     # Wavenumbers
     kx = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
@@ -57,7 +58,8 @@ def build_derived_quantities(cfg: SimulationConfig):
     exp_e = np.exp(-cfg.Delta_t / tau_e)
     noise_e = np.sqrt(1 - exp_e**2)
 
-    mycorr = (cfg.c2**2) * np.log(L / RegulNorm(np.abs(K), epsilon))
+    mycorr = (cfg.c2**2) * np.log(L / RegulNorm(normX_per, epsilon))
+    S2 = np.fft.fft2(mycorr)
 
     return {
         "N": N,
@@ -70,5 +72,5 @@ def build_derived_quantities(cfg: SimulationConfig):
         "noise_B": noise_B,
         "exp_e": exp_e,
         "noise_e": noise_e,
-        "mycorr": mycorr,
+        "S2": S2,
     }

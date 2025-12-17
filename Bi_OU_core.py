@@ -13,7 +13,7 @@ def run_simulation(cfg, derived, rng=None):
     noise_B = derived["noise_B"]
     exp_e = derived["exp_e"]
     noise_e = derived["noise_e"]
-    mycorr = derived["mycorr"]
+    S2 = derived["S2"]
 
     B_hat = np.zeros((N, N), dtype=complex)
     lepsi_hat = np.zeros((N, N), dtype=complex)
