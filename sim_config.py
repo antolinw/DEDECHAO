@@ -35,8 +35,8 @@ def build_derived_quantities(cfg: SimulationConfig):
     epsilon = L / N
 
     # Wavenumbers
-    kx = np.fft.fftfreq(N, d=L / N) * 2 * np.pi
-    ky = np.fft.fftfreq(N, d=L / N) * 2 * np.pi
+    kx = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
+    ky = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
     KX, KY = np.meshgrid(kx, ky, indexing="ij")
     K = np.sqrt(KX**2 + KY**2)
 
