@@ -46,7 +46,7 @@ def noise(cfg, derived):
     eta = rng.normal(size=(N, N, n_ens))
     B_hat = (xi + 1j * eta) / np.sqrt(2)
 
-    # B_hat = np.fft.fft2(rng.normal(size=(N, N, n_ens))) / N**2
+    # B_hat = np.fft.fft2(rng.normal(size=(N, N, n_ens)), axes=(0,1)) / N**2
 
     return B_hat
 
@@ -67,16 +67,16 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived, rng=None):
     S2 = derived["S2"][:,:,np.newaxis]
 
     # ---- Real space ----
-    B_real = np.fft.ifft2(B_hat).real
+    B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
     B_real *= N**2
     # B_real = (B_real - B_real.mean()) / B_real.std() # needed ???
 
-    lepsi_real = np.fft.ifft2(lepsi_hat).real
+    lepsi_real = np.fft.ifft2(lepsi_hat, axes=(0,1)).real
     # lepsi_real = lepsi_real / lepsi_real.std() # needed ???
     lepsi_real -= lepsi_real.var() / 2
     epsi = np.exp(lepsi_real)
 
-    Bepsi_hat = np.fft.fft2(B_real * epsi)
+    Bepsi_hat = np.fft.fft2(B_real * epsi, axes=(0,1))
 
     # ---- Velocity ----
     stream_hat = A * Bepsi_hat
