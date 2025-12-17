@@ -15,10 +15,10 @@ class SimulationConfig:
     # --------- Physical ---------
     L_factor: float = 0.5       # L = L_factor * N = large spatial scale ?
     Lx = 2                      # domain size
-    dim: float = 2.0
-    c2: float = 0.1
-    rho_s: float = 6.0
-    gamma_t: float = 2.0
+    dim: float = 2.0            # spatial dimension
+    c2: float = 0.1             # intermittency coefficient
+    rho_s: float = 6.0          # spatial spectrum slope
+    gamma_t: float = 2.0        # temporal spectrum slope
 
     tau_0B: float = 0.1
     tau_0e_factor: float = 1e10
