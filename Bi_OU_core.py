@@ -1,8 +1,6 @@
 import numpy as np
 
-def run_simulation(cfg, derived, rng=None):
-    if rng is None:
-        rng = np.random.default_rng()
+def run_simulation(cfg, derived):
 
     N = derived["N"]
     n_ens = derived["n_ens"]
@@ -39,12 +37,11 @@ def run_simulation(cfg, derived, rng=None):
 
 
 def noise(cfg, derived):
-    rng = np.random.default_rng()
     N = derived["N"]
     n_ens = derived["n_ens"]
 
-    xi = rng.normal(size=(N, N, n_ens))
-    eta = rng.normal(size=(N, N, n_ens))
+    xi = np.random.randn(N, N, n_ens)
+    eta = np.random.randn(N, N, n_ens)
     B_hat = (xi + 1j * eta) / np.sqrt(2)
 
     # B_hat = np.fft.fft2(rng.normal(size=(N, N, n_ens)), axes=(0,1)) / N**2
@@ -52,7 +49,7 @@ def noise(cfg, derived):
     return B_hat
 
 
-def CMG_velocity(B_hat,lepsi_hat,cfg, derived, rng=None):
+def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
 
     N = derived["N"]
     n_ens = derived["n_ens"]

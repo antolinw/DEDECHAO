@@ -35,6 +35,8 @@ def build_derived_quantities(cfg: SimulationConfig):
     K_LS = 2 * np.pi / L                           # large-scale wavenumber
     epsilon_reg = 1.0e-6 * cfg.Lx / N              # spatial regularisation
 
+    np.random.seed(0)
+
     # Spatial grid for doubly-periodic image
     x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
     y_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
