@@ -7,12 +7,13 @@ RegulNorm = lambda x, epsilon: np.sqrt(x**2 + epsilon**2)
 @dataclass
 class SimulationConfig:
     # --------- Numerical ---------
-    n_order: int = 9
-    N_steps: int = 10
-    Delta_t: float = 0.1
+    n_order: int = 9            # N = 2^n_order = number of space steps along x
+    N_steps: int = 10           # number of time steps
+    Delta_t: float = 0.1        # time step
 
     # --------- Physical ---------
-    L_factor: float = 0.5
+    L_factor: float = 0.5       # L = L_factor * N = large spatial scale ?
+    Lx = 2                      # domain size
     dim: float = 2.0
     c2: float = 0.1
     rho_s: float = 6.0
