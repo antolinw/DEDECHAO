@@ -10,6 +10,7 @@ class SimulationConfig:
     n_order: int = 9            # N = 2^n_order = number of space steps along x
     N_steps: int = 10           # number of time steps
     Delta_t: float = 0.1        # time step
+    n_ens: int = 3              # ensemble size
 
     # --------- Physical ---------
     L_factor: float = 0.5       # L = L_factor * N = large spatial scale ?
@@ -63,6 +64,8 @@ def build_derived_quantities(cfg: SimulationConfig):
 
     return {
         "N": N,
+        "PN": PN,
+        "n_ens": cfg.n_ens,
         "L": L,
         "KX": KX,
         "KY": KY,

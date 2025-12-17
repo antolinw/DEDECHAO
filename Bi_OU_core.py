@@ -5,20 +5,19 @@ def run_simulation(cfg, derived, rng=None):
         rng = np.random.default_rng()
 
     N = derived["N"]
+    n_ens = derived["n_ens"]
 
-    exp_B = derived["exp_B"]
-    noise_B = derived["noise_B"]
-    exp_e = derived["exp_e"]
-    noise_e = derived["noise_e"]
-    S2 = derived["S2"]
+    exp_B = derived["exp_B"][:,:,np.newaxis]
+    noise_B = derived["noise_B"][:,:,np.newaxis]
+    exp_e = derived["exp_e"][:,:,np.newaxis]
+    noise_e = derived["noise_e"][:,:,np.newaxis]
+    S2 = derived["S2"][:,:,np.newaxis]
 
-    B_hat = np.zeros((N, N), dtype=complex)
-    lepsi_hat = np.zeros((N, N), dtype=complex)
-
-    V_x = np.zeros((cfg.N_steps, N, N))
-    V_y = np.zeros((cfg.N_steps, N, N))
-    stream = np.zeros((cfg.N_steps, N, N))
-    vort = np.zeros((cfg.N_steps, N, N))
+    # ---- init ----
+    V_x = np.zeros((cfg.N_steps, N, N, n_ens))
+    V_y = np.zeros((cfg.N_steps, N, N, n_ens))
+    stream = np.zeros((cfg.N_steps, N, N, n_ens))
+    vort = np.zeros((cfg.N_steps, N, N, n_ens))
 
     for t in range(cfg.N_steps):
         # ---- OU process for B ----
