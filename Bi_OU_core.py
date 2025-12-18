@@ -1,4 +1,6 @@
 import numpy as np
+from plot import plot_img
+online_plot = False
 
 def run_simulation(cfg, derived):
 
@@ -31,6 +33,10 @@ def run_simulation(cfg, derived):
 
         V_x[t+1,:,:,:], V_y[t+1,:,:,:], stream[t+1,:,:,:] , vort[t+1,:,:,:], epsi[t+1,:,:,:] \
             = CMG_velocity(B_hat,lepsi_hat,cfg, derived)
+        
+        if online_plot:
+            plot_img(vort[t+1,:,:,0], title="vort at t", \
+                     pause=0.1, cax = np.max(np.abs(vort[0,:,:,0]).flatten()) )
 
     return V_x, V_y, stream, vort, epsi
 
@@ -91,6 +97,8 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
     V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
     V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
     vort = np.fft.ifft2(vort_hat, axes=(0,1)).real
+
+    # ampli = stream.flatten().std()
 
     return V_x, V_y, stream, vort, epsi
 
