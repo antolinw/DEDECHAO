@@ -17,7 +17,7 @@ class SimulationConfig:
     Lx = 2                      # domain size
     dim: float = 2.0            # spatial dimension
     c2: float = 0.1             # intermittency coefficient
-    rho_s: float = 6.0          # spatial spectrum slope
+    rho_s: float = 2.0          # spatial spectrum slope
     gamma_t: float = 2.0        # temporal spectrum slope
 
     tau_0B: float = 0.1

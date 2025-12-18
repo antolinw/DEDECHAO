@@ -1,10 +1,14 @@
+import numpy as np
 import torch
+import matplotlib.pyplot as plt
+from scipy.stats import kurtosis, skew
 from sim_config import SimulationConfig, build_derived_quantities
 from Bi_OU_core import run_simulation
-from plot import plot_surface, plot_isotropic_psd
+from plot import plot_img, plot_surface, plot_isotropic_psd, compute_correlations_notime, plot_radial_profile
 
 params = SimulationConfig()          
 rho = params.rho_s
+dim = params.dim
 
 cfg = SimulationConfig()
 derived = build_derived_quantities(cfg)
@@ -35,4 +39,14 @@ krOU, psdOU = plot_isotropic_psd(
     slope=-rho
 )
 
+S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
+#plot_img(S2x[0,:,:])
+#print(np.shape(S2x))
 
+r, radial_means = plot_radial_profile(
+    S2x[0, :, :],
+    slope=rho + dim - 2,
+    slope_prefactor=1.3e-3,
+    slope_label=r"$r^{4/5}$",
+    title="S2 Radial Intensity"
+)
