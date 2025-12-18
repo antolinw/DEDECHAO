@@ -125,8 +125,8 @@ def plot_isotropic_psd(
         )
 
     plt.legend()
-    plt.xlabel("Fréquence")
-    plt.ylabel("Amplitude")
+    plt.xlabel("Wavenumber k")
+    plt.ylabel("E(k)")
     plt.grid(True, which="both", ls="--", alpha=0.3)
     plt.show()
 
@@ -207,7 +207,7 @@ def compute_correlations_notime(
     N_ana=2**8
 ):
     """
-    Compute structure-function-based correlations without time.
+    Compute structure-function-based correlations without time => on a single image at t=t0.
 
     Parameters
     ----------
