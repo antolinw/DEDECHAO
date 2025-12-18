@@ -7,6 +7,7 @@ from Bi_OU_core import run_simulation
 from plot import plot_img, plot_surface, plot_isotropic_psd, compute_correlations_notime, plot_radial_profile
 
 params = SimulationConfig()          
+c2 = params.c2
 rho = params.rho_s
 dim = params.dim
 
@@ -34,7 +35,6 @@ V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
 # Spectra (Spatial)
 krOU, psdOU = plot_isotropic_psd(
     V_x[0,:,:,0],
-    scale=1.6e23,
     label="Bi-OU",
     slope=-rho
 )
@@ -46,6 +46,11 @@ S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
 r, radial_means = plot_radial_profile(
     S2x[0, :, :],
     slope=rho + dim - 2,
-    slope_prefactor=1.3e-3,
     title="S2 Radial Intensity"
+)
+
+r, radial_means = plot_radial_profile(
+    S3x[0, :, :],
+    slope= c2 + (rho + dim - 2) / 2,
+    title="S3 Radial Intensity"
 )

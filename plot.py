@@ -87,7 +87,6 @@ def plot_isotropic_psd(
     field,
     dx=1.0,
     dy=1.0,
-    scale=1.0,
     label="Field",
     slope=None,
     window=False
@@ -111,14 +110,15 @@ def plot_isotropic_psd(
         Apply Hamming window
     """
     kr, psd = isotropic_psd_2d(field, dx=dx, dy=dy, window=window)
-
+    logA = np.mean(np.log(psd) - slope * np.log(kr))
+    A = np.exp(logA)
     plt.figure()
-    plt.loglog(kr, psd * scale, label=label)
+    plt.loglog(kr, psd, label=label)
 
     if slope is not None:
         plt.loglog(
             kr,
-            kr**slope,
+            (kr**slope) * A,
             "--",
             label=rf"$k^{{{slope}}}$"
         )
@@ -273,7 +273,7 @@ def radial_average_2d(img):
     r_dist = np.arange(len(radial_mean))
     return r_dist, radial_mean
 
-def plot_radial_profile(
+def plot_radial_profile_s(
     img,
     slope=None,
     slope_prefactor=1.0,
@@ -303,3 +303,33 @@ def plot_radial_profile(
     plt.show()
 
     return r, profile   
+
+def plot_radial_profile(
+    img,
+    slope=None,
+    slope_label=None,
+    xlim=(1, 40),
+    title="Radial Intensity"
+):
+    r, profile = radial_average_2d(img)
+    slope_prefactor = profile[1]
+    plt.figure()
+    plt.loglog(r[1:], profile[1:], label="Radial mean")
+
+    if slope is not None:
+        plt.loglog(
+            r,
+            slope_prefactor * r**slope,
+            "r--",
+            label=slope_label if slope_label else rf"$r^{{{slope}}}$"
+        )
+
+    plt.xlabel("Radius (pixels)")
+    plt.ylabel("Mean intensity")
+    plt.title(title)
+    plt.xlim(*xlim)
+    plt.grid(True, which="both")
+    plt.legend()
+    plt.show()
+
+    return r, profile 
