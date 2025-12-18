@@ -47,6 +47,5 @@ r, radial_means = plot_radial_profile(
     S2x[0, :, :],
     slope=rho + dim - 2,
     slope_prefactor=1.3e-3,
-    slope_label=r"$r^{4/5}$",
     title="S2 Radial Intensity"
 )
