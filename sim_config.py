@@ -8,18 +8,18 @@ RegulNorm = lambda x, epsilon_reg: np.sqrt(x**2 + epsilon_reg**2)
 class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9            # N = 2^n_order = number of space steps along x
-    N_steps: int = 10           # number of time steps
+    N_steps: int = 100           # number of time steps
     Delta_t: float = 0.1        # time step
-    n_ens: int = 3              # ensemble size
+    n_ens: int = 1              # ensemble size
 
     # --------- Physical ---------
     Lx: float = 2                 # domain size
     L_LS: float = Lx/2            # large spatial scale
 
-    dim: float = 2.0
-    c2: float = 0.1
-    rho_s: float = 6.0
-    gamma_t: float = 2.0
+    dim: float = 2.0            # spatial dimension
+    c2: float = 0.1             # intermittency coefficient
+    rho_s: float = 2.0          # spatial spectrum slope
+    gamma_t: float = 2.0        # temporal spectrum slope
 
     tau_0B: float = 0.1
     tau_0e_factor: float = 1e10
