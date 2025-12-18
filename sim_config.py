@@ -8,9 +8,9 @@ RegulNorm = lambda x, epsilon_reg: np.sqrt(x**2 + epsilon_reg**2)
 class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9            # N = 2^n_order = number of space steps along x
-    N_steps: int = 10           # number of time steps
+    N_steps: int = 100           # number of time steps
     Delta_t: float = 0.1        # time step
-    n_ens: int = 3              # ensemble size
+    n_ens: int = 1              # ensemble size
 
     # --------- Physical ---------
     L_factor: float = 0.5       # L = L_factor * N = large spatial scale ?

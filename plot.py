@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from scipy.stats import kurtosis, skew
 
 def plot_surface(field, title="", cmap="viridis"):
@@ -333,3 +334,55 @@ def plot_radial_profile(
     plt.show()
 
     return r, profile 
+
+def save_field_gif_matplotlib(field,
+                              filename="field.gif",
+                              fps=10,
+                              vmin=None,
+                              vmax=None,
+                              cmap="viridis"):
+    """
+    Save a GIF from a time-evolving 2D field using matplotlib.animation.
+
+    Parameters
+    ----------
+    field : np.ndarray
+        Shape (t, x, y)
+    filename : str
+        Output GIF filename (current directory)
+    fps : int
+        Frames per second
+    vmin, vmax : float or None
+        Color scale limits
+    cmap : str
+        Colormap name
+    """
+
+    nt = field.shape[0]
+
+    if vmin is None:
+        vmin = field.min()
+    if vmax is None:
+        vmax = field.max()
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(field[0], vmin=vmin, vmax=vmax, cmap=cmap)
+    ax.axis("off")
+
+    def update(frame):
+        im.set_array(field[frame])
+        return (im,)
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=nt,
+        interval=1000 / fps,
+        blit=True
+    )
+
+    # Save GIF
+    ani.save(filename, writer="pillow", fps=fps)
+    plt.close(fig)
+
+    print(f"GIF saved as {filename}")
