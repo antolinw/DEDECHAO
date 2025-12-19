@@ -29,7 +29,7 @@ def build_derived_quantities(cfg: SimulationConfig):
     PN = N//2                                      # aliased wavevector index
 
     z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
-    theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1 # spectrum slope of the bidirectionnal spatial spectrum
+    theta_1 = cfg.rho_s + cfg.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
     K_Lx = 2 * np.pi / cfg.Lx                      # largest-scale wavenumber
     K_LS = 2 * np.pi / cfg.L_LS                           # large-scale wavenumber
 
