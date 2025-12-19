@@ -65,10 +65,12 @@ def build_derived_quantities(cfg: SimulationConfig):
     exp_e = np.exp(-cfg.Delta_t / tau_e)
     noise_e = np.sqrt(1 - exp_e**2)
 
+    np.seterr(divide = 'ignore') 
     S2 = cfg.c2 * ( K / K_Lx ) ** (-1)
     S2[0, 0] = 0
     S2[PN, :] = 0
     S2[:, PN] = 0
+    np.seterr(divide = 'warn') 
 
     return {
         "N": N,
