@@ -20,8 +20,9 @@ class SimulationConfig:
     gamma_t: float = rho_s        # temporal spectrum slope
 
     tau_0B: float = 1.0
-    tau_0e_factor: float = 1e10
-    z_eps: float = 1.0
+    tau_0e_factor: float = np.inf # steady intermittency
+    # tau_0e_factor: float = 1.0  # unsteady intermittency
+    z_eps: float = - 1.0
 
 
 def build_derived_quantities(cfg: SimulationConfig):
@@ -56,7 +57,7 @@ def build_derived_quantities(cfg: SimulationConfig):
 
     # OU timescales
     tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** (z/2)
-    tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + K / K_LS) ** (-cfg.z_eps)
+    tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + (K / K_LS)**2 ) ** (cfg.z_eps/2)
 
     exp_B = np.exp(-cfg.Delta_t / tau_B)
     noise_B = np.sqrt(1 - exp_B**2)
