@@ -2,8 +2,6 @@
 import numpy as np
 from dataclasses import dataclass
 
-RegulNorm = lambda x, epsilon_reg: np.sqrt(x**2 + epsilon_reg**2)
-
 @dataclass
 class SimulationConfig:
     # --------- Numerical ---------
@@ -32,8 +30,8 @@ def build_derived_quantities(cfg: SimulationConfig):
 
     z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
     theta_1 = cfg.rho_s + 2 * cfg.c2 + cfg.dim + 1 # spectrum slope of the bidirectionnal spatial spectrum
+    K_Lx = 2 * np.pi / cfg.Lx                      # largest-scale wavenumber
     K_LS = 2 * np.pi / cfg.L_LS                           # large-scale wavenumber
-    epsilon_reg = 1.0e-6 * cfg.Lx / N              # spatial regularisation
 
     np.random.seed(0)
 
@@ -66,8 +64,10 @@ def build_derived_quantities(cfg: SimulationConfig):
     exp_e = np.exp(-cfg.Delta_t / tau_e)
     noise_e = np.sqrt(1 - exp_e**2)
 
-    mycorr = cfg.c2 * np.log(cfg.Lx / RegulNorm(normX_per, epsilon_reg))
-    S2 = np.fft.fft2(mycorr)
+    S2 = cfg.c2 * ( K / K_Lx ) ** (-1)
+    S2[0, 0] = 0
+    S2[PN, :] = 0
+    S2[:, PN] = 0
 
     return {
         "N": N,
