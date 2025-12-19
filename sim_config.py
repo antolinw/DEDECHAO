@@ -17,9 +17,9 @@ class SimulationConfig:
     dim: float = 2.0            # spatial dimension
     c2: float = 0.1             # intermittency coefficient
     rho_s: float = 2.0          # spatial spectrum slope
-    gamma_t: float = 2.0        # temporal spectrum slope
+    gamma_t: float = rho_s        # temporal spectrum slope
 
-    tau_0B: float = 0.1
+    tau_0B: float = 1.0
     tau_0e_factor: float = 1e10
     z_eps: float = 1.0
 
@@ -28,7 +28,7 @@ def build_derived_quantities(cfg: SimulationConfig):
     N = 2 ** cfg.n_order
     PN = N//2                                      # aliased wavevector index
 
-    z = - (cfg.rho_s - 1) / (cfg.gamma_t + 1)      # scaling slope for time scale
+    z = (cfg.rho_s - 1) / (cfg.gamma_t - 1)      # scaling slope for time scale
     theta_1 = cfg.rho_s + cfg.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
     K_Lx = 2 * np.pi / cfg.Lx                      # largest-scale wavenumber
     K_LS = 2 * np.pi / cfg.L_LS                           # large-scale wavenumber
@@ -55,7 +55,7 @@ def build_derived_quantities(cfg: SimulationConfig):
     A = np.sqrt(S1)
 
     # OU timescales
-    tau_B = cfg.tau_0B * (1 + K / K_LS) ** (-z)
+    tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** (z/2)
     tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + K / K_LS) ** (-cfg.z_eps)
 
     exp_B = np.exp(-cfg.Delta_t / tau_B)
