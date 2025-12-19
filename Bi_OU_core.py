@@ -42,10 +42,7 @@ def noise(cfg, derived):
     n_ens = derived["n_ens"]
 
     xi = np.random.randn(N, N, n_ens)
-    eta = np.random.randn(N, N, n_ens)
-    B_hat = (xi + 1j * eta) / np.sqrt(2)
-
-    # B_hat = np.fft.fft2(rng.normal(size=(N, N, n_ens)), axes=(0,1)) / N**2
+    B_hat = np.fft.fft2(xi, axes=(0,1)) 
 
     B_hat[0, 0] = 0
     B_hat[PN, :] = 0
@@ -71,11 +68,9 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
 
     # ---- Real space ----
     B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
-    B_real *= N**2
     # B_real = (B_real - B_real.mean()) / B_real.std() # needed ???
 
     lepsi_real = np.fft.ifft2(lepsi_hat, axes=(0,1)).real
-    # lepsi_real = lepsi_real / lepsi_real.std() # needed ???
     lepsi_real -= lepsi_real.var() 
     epsi = np.exp(lepsi_real)
 
