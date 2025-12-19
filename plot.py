@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from scipy.stats import kurtosis, skew
 
+def zeta_n(c1, c2, n):
+    return c1*n - c2*n*(n-2)/2
+
 def plot_surface(field, title="", cmap="viridis"):
     N = field.shape[0]
     x = np.linspace(-1, 1, N)
