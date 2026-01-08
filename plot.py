@@ -387,32 +387,34 @@ def save_field_gif_matplotlib(field,
 
     print(f"GIF saved as {filename}")
 
-    
-def compute_spectrum(signal, dt):
+def compute_spectrum(signal, dt, axis=0):
     """
-    Compute frequency spectrum (PSD) of a 1D time signal.
+    Compute temporal power spectrum of a signal.
 
     Parameters
     ----------
     signal : np.ndarray
-        1D time series
+        Array with time as one axis, e.g. (t, x, y, 0)
     dt : float
         Time step
+    axis : int
+        Axis corresponding to time
 
     Returns
     -------
     w : np.ndarray
         Frequencies
     ke_hat : np.ndarray
-        Power spectral density
+        PSD (1D if 1 point, else multi-D)
     """
 
-    N = signal.size
+    N = signal.shape[axis]
 
-    uhat = np.fft.fft(signal)[0:N//2]
-    ke_hat = np.abs(uhat)**2
-    w = np.fft.fftfreq(N, dt)[0:N//2]
+    uhat = np.fft.rfft(signal, axis=axis)
+    ke_hat = np.abs(uhat)**2 / N
 
+    w = np.fft.rfftfreq(N, dt)
+    
     return w, ke_hat
 
 def plot_spectrum(w,
@@ -459,6 +461,87 @@ def plot_spectrum(w,
             '--',
             label=rf"$f^{{{slope}}}$",
             color="darkorange"
+        )
+
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("PSD")
+    plt.grid(True, which="both", ls="--")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.show()
+
+def plot_spectrum_mean_std(
+    w,
+    ke_hat,
+    filename="spectrum_mean_std.png",
+    slope_ref=True,
+    slope=-5/3,
+    skip_zero=True,
+    std_factor=1.0,
+):
+    """
+    Plot mean spectrum with standard deviation shading.
+
+    Parameters
+    ----------
+    w : np.ndarray
+        Frequencies (nfreq,)
+    ke_hat : np.ndarray
+        PSD array with shape (nfreq, ...)
+    slope_ref : bool
+        Plot reference slope
+    slope : float
+        Reference slope exponent
+    skip_zero : bool
+        Skip lowest frequencies
+    std_factor : float
+        Multiplier for std shading (1 = ±1σ)
+    """
+
+    # Remove zero / very-low frequencies if requested
+    if skip_zero:
+        w_plot = w[2:]
+        ke_plot = ke_hat[2:]
+    else:
+        w_plot = w
+        ke_plot = ke_hat
+
+    # Average & std over spatial dimensions
+    spatial_axes = tuple(range(1, ke_plot.ndim))
+
+    log_ke = np.log(ke_plot)    
+    log_mean = log_ke.mean(axis=spatial_axes)
+    log_std = log_ke.std(axis=spatial_axes)
+
+    ke_mean = np.exp(log_mean)                        # Mean spectrum
+    ke_low  = np.exp(log_mean - std_factor * log_std) # Lower envelope
+    ke_high = np.exp(log_mean + std_factor * log_std) # Upper envelope
+
+    plt.figure(figsize=(8, 5))
+
+    # Mean spectrum
+    plt.loglog(w_plot, ke_mean, label="Mean spectrum")
+
+    # Std envelope
+    plt.fill_between(
+        w_plot,
+        ke_low,
+        ke_high,
+        alpha=0.3,
+        label=rf"$\pm {std_factor}\sigma$",
+    )
+
+    # Reference slope
+    if slope_ref:
+        logA = np.mean(np.log(ke_mean) - slope * np.log(w_plot))
+        A = np.exp(logA)
+        plt.loglog(
+            w_plot,
+            A * w_plot**slope,
+            "--",
+            color="darkorange",
+            label=rf"$f^{{{slope}}}$",
         )
 
     plt.xlabel("Frequency [Hz]")

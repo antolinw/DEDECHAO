@@ -6,7 +6,8 @@ from sim_config import SimulationConfig, build_derived_quantities
 from Bi_OU_core import run_simulation
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  compute_correlations_notime, plot_radial_profile, \
-                 save_field_gif_matplotlib, compute_spectrum, plot_spectrum
+                 save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
+                 plot_spectrum_mean_std
 
        
 cfg = SimulationConfig()
@@ -15,13 +16,16 @@ rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
 derived = build_derived_quantities(cfg)
+c1 = c2 + (rho + dim - 2) / 2
 
 # Outputs
 V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
 
-########################### Plots ###########################
+###################################### Plots ######################################
+##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
+###################################################################################
 
-# 2D + 3D instant plots :
+### 2D + 3D instant plots :
 #plot_surface(stream[0,:,:,0], title="stream at t=0")
 #plot_surface(V_x[0,:,:,0], title="Vx at t=0")
 #plot_surface(V_y[0,:,:,0], title="Vy at t=0")
@@ -34,65 +38,62 @@ V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
 #plot_surface(vort[-1,:,:,0], title="vort at t=tf")
 #plot_surface(epsi[-1,:,:,0], title="epsi at t=tf")
 
-# Spectra (Spatial) :
-krOU, psdOU = plot_isotropic_psd(
-    V_x[0,:,:,0],
-    label="Bi-OU",
-    slope=-rho
-)
+### Spectra (Spatial) :
+#krOU, psdOU = plot_isotropic_psd(
+#    V_x[0,:,:,0],
+#    label="Bi-OU",
+#    slope=-rho
+#)
 
-# Structure functions computation :
-S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
+### Structure functions computation :
+#S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
 
-# Plot of structure functions as images :
+### Plot of structure functions as images :
 #plot_img(S2x[0,:,:])
 #print(np.shape(S2x))
 
-# Plot of radial S2 :
-r, radial_means = plot_radial_profile(
-    S2x[0, :, :],
-    slope=rho + dim - 2,
-    title="S2 Radial Intensity"
-)
+### Plot of radial S2 :
+#r, radial_means = plot_radial_profile(
+#    S2x[0, :, :],
+#    slope=rho + dim - 2,
+#    title="S2 Radial Intensity"
+#)
 
-# Plot of radial S3 :
-r, radial_means = plot_radial_profile(
-    S3x[0, :, :],
-    slope= c2 + (rho + dim - 2) / 2,
-    title="S3 Radial Intensity"
-)
+### Plot of radial S3 :
+#r, radial_means = plot_radial_profile(
+#    S3x[0, :, :],
+#    slope= c2 + (rho + dim - 2) / 2,
+#    title="S3 Radial Intensity"
+#)
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
-save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
-save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
 
-#Temporal Spectrum take at a fixed point (here aprx center of the domain)
+###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
 #signal = V_x[:, 200, 200, 0]
-
-# Time step computation
-#dt = V_x[-1, 200, 200, 0] - V_x[-2, 200, 200, 0]
-
-# Compute spectrum
-#w, ke_hat = compute_spectrum(signal, dt)
-
-# Plot
-#plot_spectrum(w, ke_hat, slope=-gamma)
-
-#Average of Temporal Spectrums over all spatial points
 signal = V_x[:, :, :, 0]
-dt = V_x[-1, 0, 0, 0] - V_x[-2, 0, 0, 0]
 
-for i in range(signal.shape[1]):
-    for j in range(signal.shape[2]):
-        if i == 0 and j == 0:
-            signal_point = signal[:, i, j]
-            w, ke_hat = compute_spectrum(signal_point, dt)
-            ke_hat_avg = ke_hat
-        else:
-            signal_point = signal[:, i, j]
-            w, ke_hat = compute_spectrum(signal_point, dt)
-            ke_hat_avg += ke_hat
+### Time step computation
+dt = V_x[-1, 200, 200, 0] - V_x[-2, 200, 200, 0]
+
+### Compute spectrum
+w, ke_hat = compute_spectrum(signal, dt)
 
 print(np.shape(w))
-print(np.shape(ke_hat_avg))
-plot_spectrum(w, ke_hat_avg, slope=-gamma, filename='r-6_c2-1_zeps-1')
+print(np.shape(ke_hat))
+
+ke_mean = ke_hat.mean(axis=(1,2))
+ke_std  = ke_hat.std(axis=(1,2))
+
+### Plot spectrum averaged over space
+#plot_spectrum(w, ke_mean, slope=-gamma)
+
+### Plot spectrum with mean and std
+plot_spectrum_mean_std(
+    w,
+    ke_hat,
+    slope=-gamma,
+    std_factor=1.0
+)
+

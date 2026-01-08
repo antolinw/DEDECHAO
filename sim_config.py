@@ -14,14 +14,14 @@ class SimulationConfig:
 
     # --------- Physical ---------
     Lx: float = 2                 # domain size
-    L_LS: float = Lx/2            # large spatial scale
+    L_LS: float = 0.5 * Lx           # large spatial scale
 
     dim: float = 2.0            # spatial dimension
-    c2: float = 0.1             # intermittency coefficient
-    rho_s: float = 2.0          # spatial spectrum slope
+    c2: float = 1.0             # intermittency coefficient
+    rho_s: float = 6.0          # spatial spectrum slope
     gamma_t: float = 2.0        # temporal spectrum slope
 
-    tau_0B: float = 0.1
+    tau_0B: float = 1.0
     tau_0e_factor: float = 1e10
     z_eps: float = 1.0
 
