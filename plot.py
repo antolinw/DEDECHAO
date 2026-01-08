@@ -386,3 +386,85 @@ def save_field_gif_matplotlib(field,
     plt.close(fig)
 
     print(f"GIF saved as {filename}")
+
+    
+def compute_spectrum(signal, dt):
+    """
+    Compute frequency spectrum (PSD) of a 1D time signal.
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        1D time series
+    dt : float
+        Time step
+
+    Returns
+    -------
+    w : np.ndarray
+        Frequencies
+    ke_hat : np.ndarray
+        Power spectral density
+    """
+
+    N = signal.size
+
+    uhat = np.fft.fft(signal)[0:N//2]
+    ke_hat = np.abs(uhat)**2
+    w = np.fft.fftfreq(N, dt)[0:N//2]
+
+    return w, ke_hat
+
+def plot_spectrum(w,
+                  ke_hat,
+                  filename="spectrum.png",
+                  slope_ref=True,
+                  slope=-5/3,
+                  skip_zero=True):
+    """
+    Plot spectrum in log-log scale.
+
+    Parameters
+    ----------
+    w : np.ndarray
+        Frequencies
+    ke_hat : np.ndarray
+        Power spectral density
+    slope_ref : bool
+        Plot reference slope (default: True)
+    slope : float
+        Slope exponent (default: -5/3)
+    slope_amp : float
+        Amplitude of reference slope
+    skip_zero : bool
+        Skip zero frequency
+    """
+
+    if skip_zero:
+        w_plot = w[2:]
+        ke_plot = ke_hat[2:]
+    else:
+        w_plot = w
+        ke_plot = ke_hat
+
+    plt.figure(figsize=(8, 5))
+    plt.loglog(w_plot, ke_plot, label="Spectrum")
+    #slope_amp = ke_hat[2]
+    logA = np.mean(np.log(ke_plot) - slope * np.log(w_plot))
+    A = np.exp(logA)
+    if slope_ref:
+        plt.loglog(
+            w_plot,
+            A * w_plot**slope,
+            '--',
+            label=rf"$f^{{{slope}}}$",
+            color="darkorange"
+        )
+
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("PSD")
+    plt.grid(True, which="both", ls="--")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.show()

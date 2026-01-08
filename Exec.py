@@ -4,13 +4,16 @@ import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
 from sim_config import SimulationConfig, build_derived_quantities
 from Bi_OU_core import run_simulation
-from plot import plot_img, plot_surface, plot_isotropic_psd, compute_correlations_notime, plot_radial_profile, save_field_gif_matplotlib
+from plot import plot_img, plot_surface, plot_isotropic_psd, \
+                 compute_correlations_notime, plot_radial_profile, \
+                 save_field_gif_matplotlib, compute_spectrum, plot_spectrum
 
        
 cfg = SimulationConfig()
 c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
+gamma = cfg.gamma_t
 derived = build_derived_quantities(cfg)
 
 # Outputs
@@ -60,4 +63,36 @@ r, radial_means = plot_radial_profile(
 )
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
-save_field_gif_matplotlib(vort[:,:,:,0], filename="Vorticity.gif", fps=15)
+save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
+save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
+
+#Temporal Spectrum take at a fixed point (here aprx center of the domain)
+#signal = V_x[:, 200, 200, 0]
+
+# Time step computation
+#dt = V_x[-1, 200, 200, 0] - V_x[-2, 200, 200, 0]
+
+# Compute spectrum
+#w, ke_hat = compute_spectrum(signal, dt)
+
+# Plot
+#plot_spectrum(w, ke_hat, slope=-gamma)
+
+#Average of Temporal Spectrums over all spatial points
+signal = V_x[:, :, :, 0]
+dt = V_x[-1, 0, 0, 0] - V_x[-2, 0, 0, 0]
+
+for i in range(signal.shape[1]):
+    for j in range(signal.shape[2]):
+        if i == 0 and j == 0:
+            signal_point = signal[:, i, j]
+            w, ke_hat = compute_spectrum(signal_point, dt)
+            ke_hat_avg = ke_hat
+        else:
+            signal_point = signal[:, i, j]
+            w, ke_hat = compute_spectrum(signal_point, dt)
+            ke_hat_avg += ke_hat
+
+print(np.shape(w))
+print(np.shape(ke_hat_avg))
+plot_spectrum(w, ke_hat_avg, slope=-gamma, filename='r-6_c2-1_zeps-1')
