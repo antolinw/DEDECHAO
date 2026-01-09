@@ -12,7 +12,7 @@ class SimulationConfig:
 
     # --------- Physical ---------
     Lx: float = 2                 # domain size
-    L_LS: float = Lx/2            # large spatial scale
+    L_LS: float = 0.5 * Lx           # large spatial scale
 
     dim: float = 2.0            # spatial dimension
     c2: float = 0.1             # intermittency coefficient
