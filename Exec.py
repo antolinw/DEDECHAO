@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
 from sim_config import SimulationConfig, build_derived_quantities
