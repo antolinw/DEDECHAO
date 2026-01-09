@@ -58,6 +58,9 @@ def build_derived_quantities(cfg: SimulationConfig):
     # OU timescales
     tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
     tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - cfg.z_eps/2)
+    min_t = min([tau_B.min(),tau_e.min()])
+    print("The smallest physical time is = " + str(min_t))
+    print("The time step is : dt = " + str(cfg.Delta_t))
 
     exp_B = np.exp(-cfg.Delta_t / tau_B)
     noise_B = np.sqrt(1 - exp_B**2)
