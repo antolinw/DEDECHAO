@@ -59,6 +59,7 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
     KY = derived["KY"][:,:,np.newaxis]
     K = derived["K"][:,:,np.newaxis]
     A = derived["A"][:,:,np.newaxis]
+    K_LS = 2 * np.pi / cfg.L_LS
 
     exp_B = derived["exp_B"][:,:,np.newaxis]
     noise_B = derived["noise_B"][:,:,np.newaxis]
@@ -86,6 +87,13 @@ def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
     V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
     V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
     vort = np.fft.ifft2(vort_hat, axes=(0,1)).real
+
+    # Set amplitude
+    ampli = K_LS * np.sqrt((stream[:]**2).mean())
+    stream /= ampli
+    V_x /= ampli
+    V_y /= ampli
+    vort /= ampli
 
     return V_x, V_y, stream, vort, epsi
 
