@@ -39,12 +39,6 @@ class Parameters(SimulationConfig):
 
         np.random.seed(0)
 
-        # Spatial grid for doubly-periodic image
-        x_per = np.fft.fftfreq(N, d=1/self.Lx) 
-        y_per = np.fft.fftfreq(N, d=1/self.Lx) 
-        X_per, Y_per = np.meshgrid(x_per, y_per, indexing="ij")
-        normX_per = np.sqrt(X_per**2 + Y_per**2)
-
         # Wavenumbers
         kx = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
         ky = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
