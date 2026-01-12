@@ -76,16 +76,14 @@ r, radial_means = plot_radial_profile(
 #save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
 
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
-#signal = V_x[:, 200, 200, 0]
 signal = V_x[:, :, :, 0]
 
 ### Compute spectrum
 w, ke_hat = compute_spectrum(signal, cfg.Delta_t)
 
-ke_mean = ke_hat.mean(axis=(1,2))
-ke_std  = ke_hat.std(axis=(1,2))
-
 ### Plot spectrum averaged over space
+# ke_mean = ke_hat.mean(axis=(1,2))
+# ke_std  = ke_hat.std(axis=(1,2))
 #plot_spectrum(w, ke_mean, slope=-gamma)
 
 ### Plot spectrum with mean and std
