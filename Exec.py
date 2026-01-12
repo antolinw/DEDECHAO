@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
-from sim_config import SimulationConfig, build_derived_quantities
+from sim_config import Parameters
 from Bi_OU_core import run_simulation
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  compute_correlations_notime, plot_radial_profile, \
@@ -9,16 +9,15 @@ from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  plot_spectrum_mean_std, zeta_n
 
        
-cfg = SimulationConfig()
+cfg = Parameters()
 c1 = cfg.c1
 c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
-derived = build_derived_quantities(cfg)
 
 # Outputs
-V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
+V_x, V_y, stream, vort, epsi = run_simulation(cfg)
 
 ###################################### Plots ######################################
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####

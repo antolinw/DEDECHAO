@@ -25,70 +25,71 @@ class SimulationConfig:
     # tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
+class Parameters(SimulationConfig): 
+    def __init__(self):
+        super().__init__()
 
-def build_derived_quantities(cfg: SimulationConfig):
-    N = 2 ** cfg.n_order
-    PN = N//2                                      # aliased wavevector index
+        N = 2 ** self.n_order
+        PN = N//2                                      # aliased wavevector index
 
-    z = (cfg.rho_s - 1) / (cfg.gamma_t - 1)      # scaling slope for time scale
-    theta_1 = cfg.rho_s + cfg.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
-    K_Lx = 2 * np.pi / cfg.Lx                      # largest-scale wavenumber
-    K_LS = 2 * np.pi / cfg.L_LS                           # large-scale wavenumber
+        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
+        theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
+        K_Lx = 2 * np.pi / self.Lx                      # largest-scale wavenumber
+        K_LS = 2 * np.pi / self.L_LS                           # large-scale wavenumber
 
-    np.random.seed(0)
+        np.random.seed(0)
 
-    # Spatial grid for doubly-periodic image
-    x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
-    y_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
-    X_per, Y_per = np.meshgrid(x_per, y_per, indexing="ij")
-    normX_per = np.sqrt(X_per**2 + Y_per**2)
+        # Spatial grid for doubly-periodic image
+        x_per = np.fft.fftfreq(N, d=1/self.Lx) 
+        y_per = np.fft.fftfreq(N, d=1/self.Lx) 
+        X_per, Y_per = np.meshgrid(x_per, y_per, indexing="ij")
+        normX_per = np.sqrt(X_per**2 + Y_per**2)
 
-    # Wavenumbers
-    kx = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    ky = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    KX, KY = np.meshgrid(kx, ky, indexing="ij")
-    K = np.sqrt(KX**2 + KY**2)
+        # Wavenumbers
+        kx = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
+        ky = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
+        KX, KY = np.meshgrid(kx, ky, indexing="ij")
+        K = np.sqrt(KX**2 + KY**2)
 
-    # Spectrum
-    S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-    S1[0, 0] = 0
-    S1[PN, :] = 0
-    S1[:, PN] = 0
-    A = np.sqrt(S1)
+        # Spectrum
+        S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+        S1[0, 0] = 0
+        S1[PN, :] = 0
+        S1[:, PN] = 0
+        A = np.sqrt(S1)
 
-    # OU timescales
-    tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
-    tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - cfg.z_eps/2)
-    min_t = min([tau_B.min(),tau_e.min()])
-    print("The smallest physical time is = " + str(min_t))
-    print("The time step is : dt = " + str(cfg.Delta_t))
-    if min_t <= cfg.Delta_t :
-        print("ACHTUNG : the time step is too small to prevent aliasing !!!")
+        # OU timescales
+        tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
+        tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
+        min_t = min([tau_B.min(),tau_e.min()])
+        print("The smallest physical time is = " + str(min_t))
+        print("The time step is : dt = " + str(self.Delta_t))
+        if min_t <= self.Delta_t :
+            print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
-    exp_B = np.exp(-cfg.Delta_t / tau_B)
-    noise_B = np.sqrt(1 - exp_B**2)
+        exp_B = np.exp(-self.Delta_t / tau_B)
+        noise_B = np.sqrt(1 - exp_B**2)
 
-    exp_e = np.exp(-cfg.Delta_t / tau_e)
-    noise_e = np.sqrt(1 - exp_e**2)
+        exp_e = np.exp(-self.Delta_t / tau_e)
+        noise_e = np.sqrt(1 - exp_e**2)
 
-    np.seterr(divide = 'ignore') 
-    S2 = cfg.c2 * ( K / K_Lx ) ** (-1)
-    S2[0, 0] = 0
-    S2[PN, :] = 0
-    S2[:, PN] = 0
-    np.seterr(divide = 'warn') 
+        np.seterr(divide = 'ignore') 
+        S2 = self.c2 * ( K / K_Lx ) ** (-1)
+        S2[0, 0] = 0
+        S2[PN, :] = 0
+        S2[:, PN] = 0
+        np.seterr(divide = 'warn') 
 
-    return {
-        "N": N,
-        "PN": PN,
-        "n_ens": cfg.n_ens,
-        "KX": KX,
-        "KY": KY,
-        "K": K,
-        "A": A,
-        "exp_B": exp_B,
-        "noise_B": noise_B,
-        "exp_e": exp_e,
-        "noise_e": noise_e,
-        "S2": S2,
-    }
+        self.N = N
+        self.PN = PN
+        self.n_ens = self.n_ens
+        self.KX = KX
+        self.KY = KY
+        self.K = K
+        self.A = A
+        self.exp_B = exp_B
+        self.noise_B = noise_B
+        self.exp_e = exp_e
+        self.noise_e = noise_e
+        self.S2 = S2
+    

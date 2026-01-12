@@ -1,15 +1,15 @@
 import numpy as np
 
-def run_simulation(cfg, derived):
+def run_simulation(cfg):
 
-    N = derived["N"]
-    n_ens = derived["n_ens"]
+    N = cfg.N
+    n_ens = cfg.n_ens
 
-    exp_B = derived["exp_B"][:,:,np.newaxis]
-    noise_B = derived["noise_B"][:,:,np.newaxis]
-    exp_e = derived["exp_e"][:,:,np.newaxis]
-    noise_e = derived["noise_e"][:,:,np.newaxis]
-    S2 = derived["S2"][:,:,np.newaxis]
+    exp_B = cfg.exp_B[:,:,np.newaxis]
+    noise_B = cfg.noise_B[:,:,np.newaxis]
+    exp_e = cfg.exp_e[:,:,np.newaxis]
+    noise_e = cfg.noise_e[:,:,np.newaxis]
+    S2 = cfg.S2[:,:,np.newaxis]
 
     # ---- init ----
     V_x = np.zeros((cfg.N_steps, N, N, n_ens))
@@ -18,28 +18,28 @@ def run_simulation(cfg, derived):
     vort = np.zeros((cfg.N_steps, N, N, n_ens))
     epsi = np.zeros((cfg.N_steps, N, N, n_ens))
 
-    B_hat = noise(cfg, derived)
-    lepsi_hat =  np.sqrt(S2) * noise(cfg, derived)
+    B_hat = noise(cfg)
+    lepsi_hat =  np.sqrt(S2) * noise(cfg)
     V_x[0,:,:,:], V_y[0,:,:,:], stream[0,:,:,:], vort[0,:,:,:], epsi[0,:,:,:]\
-        = CMG_velocity(B_hat,lepsi_hat,cfg, derived)
+        = CMG_velocity(B_hat,lepsi_hat,cfg)
 
     for t in range(cfg.N_steps-1):
         # ---- OU process for B ----
-        B_hat = exp_B * B_hat + noise_B * noise(cfg, derived)
+        B_hat = exp_B * B_hat + noise_B * noise(cfg)
         # ---- OU process for epsilon ----
-        lepsi_hat = exp_e  * lepsi_hat + noise_e * np.sqrt(S2) * noise(cfg, derived)
+        lepsi_hat = exp_e  * lepsi_hat + noise_e * np.sqrt(S2) * noise(cfg)
 
         V_x[t+1,:,:,:], V_y[t+1,:,:,:], stream[t+1,:,:,:] , vort[t+1,:,:,:], epsi[t+1,:,:,:] \
-            = CMG_velocity(B_hat,lepsi_hat,cfg, derived)
+            = CMG_velocity(B_hat,lepsi_hat,cfg)
 
     return V_x, V_y, stream, vort, epsi
 
 
 
-def noise(cfg, derived):
-    N = derived["N"]
-    PN = derived["PN"]
-    n_ens = derived["n_ens"]
+def noise(cfg):
+    N = cfg.N
+    PN = cfg.PN
+    n_ens = cfg.n_ens
 
     xi = np.random.randn(N, N, n_ens)
     B_hat = np.fft.fft2(xi, axes=(0,1)) 
@@ -51,21 +51,21 @@ def noise(cfg, derived):
     return B_hat
 
 
-def CMG_velocity(B_hat,lepsi_hat,cfg, derived):
+def CMG_velocity(B_hat,lepsi_hat,cfg):
 
-    N = derived["N"]
-    n_ens = derived["n_ens"]
-    KX = derived["KX"][:,:,np.newaxis]
-    KY = derived["KY"][:,:,np.newaxis]
-    K = derived["K"][:,:,np.newaxis]
-    A = derived["A"][:,:,np.newaxis]
+    N = cfg.N
+    n_ens = cfg.n_ens
+    KX = cfg.KX[:,:,np.newaxis]
+    KY = cfg.KY[:,:,np.newaxis]
+    K = cfg.K[:,:,np.newaxis]
+    A = cfg.A[:,:,np.newaxis]
     K_LS = 2 * np.pi / cfg.L_LS
 
-    exp_B = derived["exp_B"][:,:,np.newaxis]
-    noise_B = derived["noise_B"][:,:,np.newaxis]
-    exp_e = derived["exp_e"][:,:,np.newaxis]
-    noise_e = derived["noise_e"][:,:,np.newaxis]
-    S2 = derived["S2"][:,:,np.newaxis]
+    exp_B = cfg.exp_B[:,:,np.newaxis]
+    noise_B = cfg.noise_B[:,:,np.newaxis]
+    exp_e = cfg.exp_e[:,:,np.newaxis]
+    noise_e = cfg.noise_e[:,:,np.newaxis]
+    S2 = cfg.S2[:,:,np.newaxis]
 
     # ---- Real space ----
     B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
