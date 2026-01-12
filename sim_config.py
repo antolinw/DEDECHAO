@@ -7,7 +7,7 @@ class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9            # N = 2^n_order = number of space steps along x
     N_steps: int = 100           # number of time steps
-    Delta_t: float = 0.1        # time step
+    Delta_t: float = 1e-3        # time step
     n_ens: int = 1              # ensemble size
 
     # --------- Physical ---------
@@ -61,6 +61,8 @@ def build_derived_quantities(cfg: SimulationConfig):
     min_t = min([tau_B.min(),tau_e.min()])
     print("The smallest physical time is = " + str(min_t))
     print("The time step is : dt = " + str(cfg.Delta_t))
+    if min_t <= cfg.Delta_t :
+        print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
     exp_B = np.exp(-cfg.Delta_t / tau_B)
     noise_B = np.sqrt(1 - exp_B**2)
