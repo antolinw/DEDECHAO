@@ -18,6 +18,7 @@ class SimulationConfig:
     c2: float = 0.1             # intermittency coefficient
     rho_s: float = 2.0          # spatial spectrum slope
     gamma_t: float = rho_s        # temporal spectrum slope
+    c1 = (rho_s + dim - 2) / 2    # fractal exponent
 
     tau_0B: float = 1.0
     tau_0e_factor: float = np.inf # steady intermittency

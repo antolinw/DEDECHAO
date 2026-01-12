@@ -6,16 +6,16 @@ from Bi_OU_core import run_simulation
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  compute_correlations_notime, plot_radial_profile, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std
+                 plot_spectrum_mean_std, zeta_n
 
        
 cfg = SimulationConfig()
+c1 = cfg.c1
 c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
 derived = build_derived_quantities(cfg)
-c1 = c2 + (rho + dim - 2) / 2
 
 # Outputs
 V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
