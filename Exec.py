@@ -73,14 +73,8 @@ V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
 #signal = V_x[:, 200, 200, 0]
 signal = V_x[:, :, :, 0]
 
-### Time step computation
-dt = V_x[-1, 200, 200, 0] - V_x[-2, 200, 200, 0]
-
 ### Compute spectrum
-w, ke_hat = compute_spectrum(signal, dt)
-
-print(np.shape(w))
-print(np.shape(ke_hat))
+w, ke_hat = compute_spectrum(signal, cfg.Delta_t)
 
 ke_mean = ke_hat.mean(axis=(1,2))
 ke_std  = ke_hat.std(axis=(1,2))
