@@ -322,8 +322,8 @@ def plot_radial_profile(
 
     if slope is not None:
         plt.loglog(
-            r,
-            slope_prefactor * r**slope,
+            r[1:],
+            slope_prefactor * r[1:]**slope,
             "r--",
             label=slope_label if slope_label else rf"$r^{{{slope}}}$"
         )
