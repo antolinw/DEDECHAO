@@ -85,3 +85,7 @@ class Parameters(SimulationConfig):
         S1[0, 0] = 0
         S1[self.PN, :] = 0
         S1[:, self.PN] = 0
+        
+    def zeroField(self):
+        zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+

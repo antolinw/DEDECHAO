@@ -12,11 +12,11 @@ def run_simulation(cfg):
     S2 = cfg.S2[:,:,np.newaxis]
 
     # ---- init ----
-    V_x = np.zeros((cfg.N_steps, N, N, n_ens))
-    V_y = np.zeros((cfg.N_steps, N, N, n_ens))
-    stream = np.zeros((cfg.N_steps, N, N, n_ens))
-    vort = np.zeros((cfg.N_steps, N, N, n_ens))
-    epsi = np.zeros((cfg.N_steps, N, N, n_ens))
+    V_x = cfg.zeroField()
+    V_y = cfg.zeroField()
+    stream = cfg.zeroField()
+    vort = cfg.zeroField()
+    epsi = cfg.zeroField()
 
     B_hat = noise(cfg)
     lepsi_hat =  np.sqrt(S2) * noise(cfg)
