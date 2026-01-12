@@ -7,17 +7,18 @@ class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9            # N = 2^n_order = number of space steps along x
     N_steps: int = 100           # number of time steps
-    Delta_t: float = 0.1        # time step
+    Delta_t: float = 1e-3        # time step
     n_ens: int = 1              # ensemble size
 
     # --------- Physical ---------
     Lx: float = 2                 # domain size
-    L_LS: float = Lx/2            # large spatial scale
+    L_LS: float = 0.5 * Lx           # large spatial scale
 
     dim: float = 2.0            # spatial dimension
     c2: float = 0.1             # intermittency coefficient
     rho_s: float = 2.0          # spatial spectrum slope
     gamma_t: float = rho_s        # temporal spectrum slope
+    c1 = (rho_s + dim - 2) / 2    # fractal exponent
 
     tau_0B: float = 1.0
     tau_0e_factor: float = np.inf # steady intermittency
@@ -58,6 +59,11 @@ def build_derived_quantities(cfg: SimulationConfig):
     # OU timescales
     tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
     tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - cfg.z_eps/2)
+    min_t = min([tau_B.min(),tau_e.min()])
+    print("The smallest physical time is = " + str(min_t))
+    print("The time step is : dt = " + str(cfg.Delta_t))
+    if min_t <= cfg.Delta_t :
+        print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
     exp_B = np.exp(-cfg.Delta_t / tau_B)
     noise_B = np.sqrt(1 - exp_B**2)
