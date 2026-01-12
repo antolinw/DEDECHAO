@@ -36,6 +36,7 @@ class Parameters(SimulationConfig):
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
         K_Lx = 2 * np.pi / self.Lx                      # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                           # large-scale wavenumber
+        self.K_LS = K_LS
 
         np.random.seed(0)
 
@@ -71,15 +72,15 @@ class Parameters(SimulationConfig):
         np.seterr(divide = 'warn') 
 
         self.N = N
-        self.KX = KX
-        self.KY = KY
-        self.K = K
-        self.A = A
-        self.exp_B = exp_B
-        self.noise_B = noise_B
-        self.exp_e = exp_e
-        self.noise_e = noise_e
-        self.S2 = S2
+        self.KX = KX[:,:,np.newaxis]
+        self.KY = KY[:,:,np.newaxis]
+        self.K = K[:,:,np.newaxis]
+        self.A = A[:,:,np.newaxis]
+        self.exp_B = exp_B[:,:,np.newaxis]
+        self.noise_B = noise_B[:,:,np.newaxis]
+        self.exp_e = exp_e[:,:,np.newaxis]
+        self.noise_e = noise_e[:,:,np.newaxis]
+        self.S2 = S2[:,:,np.newaxis]
     
     def cleanAliasing(self,S1):
         S1[0, 0] = 0
