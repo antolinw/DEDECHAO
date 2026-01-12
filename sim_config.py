@@ -30,7 +30,7 @@ class Parameters(SimulationConfig):
         super().__init__()
 
         N = 2 ** self.n_order
-        PN = N//2                                      # aliased wavevector index
+        self.PN = N//2                                      # aliased wavevector index
 
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
@@ -47,9 +47,7 @@ class Parameters(SimulationConfig):
 
         # Spectrum
         S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-        S1[0, 0] = 0
-        S1[PN, :] = 0
-        S1[:, PN] = 0
+        self.cleanAliasing(S1)
         A = np.sqrt(S1)
 
         # OU timescales
@@ -69,14 +67,10 @@ class Parameters(SimulationConfig):
 
         np.seterr(divide = 'ignore') 
         S2 = self.c2 * ( K / K_Lx ) ** (-1)
-        S2[0, 0] = 0
-        S2[PN, :] = 0
-        S2[:, PN] = 0
+        self.cleanAliasing(S2)
         np.seterr(divide = 'warn') 
 
         self.N = N
-        self.PN = PN
-        self.n_ens = self.n_ens
         self.KX = KX
         self.KY = KY
         self.K = K
@@ -87,3 +81,7 @@ class Parameters(SimulationConfig):
         self.noise_e = noise_e
         self.S2 = S2
     
+    def cleanAliasing(self,S1):
+        S1[0, 0] = 0
+        S1[self.PN, :] = 0
+        S1[:, self.PN] = 0

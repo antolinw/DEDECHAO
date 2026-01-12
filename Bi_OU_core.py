@@ -44,9 +44,7 @@ def noise(cfg):
     xi = np.random.randn(N, N, n_ens)
     B_hat = np.fft.fft2(xi, axes=(0,1)) 
 
-    B_hat[0, 0] = 0
-    B_hat[PN, :] = 0
-    B_hat[:, PN] = 0
+    cfg.cleanAliasing(B_hat)
 
     return B_hat
 
