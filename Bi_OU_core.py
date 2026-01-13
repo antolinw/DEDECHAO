@@ -28,7 +28,7 @@ def run_simulation(cfg):
 
 
 def noise(cfg):
-    xi = np.random.randn(cfg.N, cfg.N, cfg.n_ens)
+    xi = cfg.whiteNoise()
     B_hat = np.fft.fft2(xi, axes=(0,1)) 
 
     cfg.cleanAliasing(B_hat)
