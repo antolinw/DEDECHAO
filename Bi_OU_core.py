@@ -9,16 +9,16 @@ def run_simulation(cfg):
     vort = cfg.zeroField()
     epsi = cfg.zeroField()
 
-    B_hat = noise(cfg)
-    lepsi_hat =  np.sqrt(cfg.S2) * noise(cfg)
+    B_hat = fftnoise(cfg)
+    lepsi_hat =  np.sqrt(cfg.S2) * fftnoise(cfg)
     V_x[0,:,:,:], V_y[0,:,:,:], stream[0,:,:,:], vort[0,:,:,:], epsi[0,:,:,:]\
         = CMG_velocity(B_hat,lepsi_hat,cfg)
 
     for t in range(cfg.N_steps-1):
         # ---- OU process for B ----
-        B_hat = cfg.exp_B * B_hat + cfg.noise_B * noise(cfg)
+        B_hat = cfg.exp_B * B_hat + cfg.noise_B * fftnoise(cfg)
         # ---- OU process for epsilon ----
-        lepsi_hat = cfg.exp_e  * lepsi_hat + cfg.noise_e * np.sqrt(cfg.S2) * noise(cfg)
+        lepsi_hat = cfg.exp_e  * lepsi_hat + cfg.noise_e * np.sqrt(cfg.S2) * fftnoise(cfg)
 
         V_x[t+1,:,:,:], V_y[t+1,:,:,:], stream[t+1,:,:,:] , vort[t+1,:,:,:], epsi[t+1,:,:,:] \
             = CMG_velocity(B_hat,lepsi_hat,cfg)
@@ -27,7 +27,7 @@ def run_simulation(cfg):
 
 
 
-def noise(cfg):
+def fftnoise(cfg):
     xi = cfg.whiteNoise()
     B_hat = np.fft.fft2(xi, axes=(0,1)) 
 
