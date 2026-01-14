@@ -90,6 +90,9 @@ class Parameters(SimulationConfig):
     def zeroField(self):
         zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
 
+    def zeroSpatialField(self):
+        zeroF = np.zeros((self.N, self.N, self.n_ens))
+        return zeroF
     
     def whiteNoise(self):
         xi = np.random.randn(self.N, self.N, self.n_ens)
