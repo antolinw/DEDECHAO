@@ -42,9 +42,27 @@ class Parameters(SimulationConfig):
 
         # Wavenumbers
         kx = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
-        ky = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
-        KX, KY = np.meshgrid(kx, ky, indexing="ij")
-        K = np.sqrt(KX**2 + KY**2)
+        if self.dim == 2 :
+            KX, KY = np.meshgrid(kx, kx, indexing="ij")
+            KX = KX[:,:,np.newaxis]
+            KY = KY[:,:,np.newaxis]
+            K = np.sqrt(KX**2 + KY**2)
+            Kv = np.concat((KX, KY), axis= 2)
+            self.KX = KX
+            self.KY = KY
+        elif self.dim == 3 :
+            KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+            KX = KX[:,:,:,np.newaxis]
+            KY = KY[:,:,:,np.newaxis]
+            KZ = KZ[:,:,:,np.newaxis]
+            K = np.sqrt(KX**2 + KY**2 + KZ**2)
+            Kv = np.concat((KX, KY, KZ), axis= 3)
+            self.KX = KX
+            self.KY = KY
+            self.KZ = KZ
+            self.Kv = Kv[:,:,:,:,np.newaxis]
+        else:
+            raise ValueError("Incorrect dim")
 
         # Spectrum
         S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
@@ -71,29 +89,59 @@ class Parameters(SimulationConfig):
         self.cleanAliasing(S2)
         np.seterr(divide = 'warn') 
 
+        if self.dim == 3 :
+            K = K[:,:,:,:,np.newaxis]
+            A = A[:,:,:,:,np.newaxis]
+            exp_B = exp_B[:,:,:,:,np.newaxis]
+            noise_B = noise_B[:,:,:,:,np.newaxis]
+
         self.N = N
-        self.KX = KX[:,:,np.newaxis]
-        self.KY = KY[:,:,np.newaxis]
-        self.K = K[:,:,np.newaxis]
-        self.A = A[:,:,np.newaxis]
-        self.exp_B = exp_B[:,:,np.newaxis]
-        self.noise_B = noise_B[:,:,np.newaxis]
-        self.exp_e = exp_e[:,:,np.newaxis]
-        self.noise_e = noise_e[:,:,np.newaxis]
-        self.S2 = S2[:,:,np.newaxis]
+        self.K = K
+        self.A = A
+        self.exp_B = exp_B
+        self.noise_B = noise_B
+        self.exp_e = exp_e
+        self.noise_e = noise_e
+        self.S2 = S2
     
     def cleanAliasing(self,S1):
-        S1[0, 0] = 0
-        S1[self.PN, :] = 0
-        S1[:, self.PN] = 0
-        
+        if self.dim == 2 :
+            S1[0, 0] = 0
+            S1[self.PN, :] = 0
+            S1[:, self.PN] = 0
+        elif self.dim == 3 :
+            S1[0, 0, 0] = 0
+            S1[self.PN, :, :] = 0
+            S1[:, self.PN, :] = 0
+            S1[:, :, self.PN] = 0
+        else:
+            raise ValueError("Incorrect dim")
+
     def zeroField(self):
-        zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+        if self.dim == 2 :
+            zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+        elif self.dim == 3 :
+            zeroF = np.zeros((self.N_steps, self.N, self.N, self.N, self.n_ens))
+        else:
+            raise ValueError("Incorrect dim")
+        return zeroF
 
     def zeroSpatialField(self):
-        zeroF = np.zeros((self.N, self.N, self.n_ens))
+        if self.dim == 2 :
+            zeroF = np.zeros((self.N, self.N, self.n_ens))
+        elif self.dim == 3 :
+            zeroF = np.zeros((self.N, self.N, self.N, self.n_ens))
+        else:
+            raise ValueError("Incorrect dim")
         return zeroF
     
-    def whiteNoise(self):
-        xi = np.random.randn(self.N, self.N, self.n_ens)
+    def whiteNoise(self, scalar = False):
+        if self.dim == 2 :
+            xi = np.random.randn(self.N, self.N, self.n_ens)
+        elif self.dim == 3 :
+            xi = np.random.randn(self.N, self.N, self.N, 3*(not scalar) + scalar, self.n_ens)
+            if scalar:
+                xi = xi[:,:,:,0,:]
+        else:
+            raise ValueError("Incorrect dim")
         return xi
