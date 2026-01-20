@@ -73,6 +73,8 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
         V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
         V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
         V_z = cfg.zeroSpatialField()
+        stream_z = stream
+        vort_z = vort
     if cfg.dim == 3:
         stream = np.fft.ifft(stream, axis=2).real
         vort = np.fft.ifft(vort, axis=2).real
