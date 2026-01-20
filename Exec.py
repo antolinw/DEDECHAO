@@ -31,16 +31,17 @@ if dim == 3:
    vort_z = vort_z[:,:,:,:,0]
 
 ### 2D + 3D instant plots :
-#plot_surface(stream[0,:,:,0], title="stream at t=0")
+#plot_surface(stream_z[0,:,:,0], title="stream_z at t=0")
 #plot_surface(V_x[0,:,:,0], title="Vx at t=0")
-#plot_surface(V_y[0,:,:,0], title="Vy at t=0")
-plot_surface(vort[0,:,:,0], title="vort at t=0")
+plot_surface(V_y[0,:,:,0], title="Vy at t=0 and z=0")
+plot_surface(V_z[0,:,:,0], title="Vz at t=0 and z=0")
+plot_surface(vort_z[0,:,:,0], title="vort_z at t=0 and z=0")
 #plot_surface(epsi[0,:,:,0], title="epsi at t=0")
 
-#plot_surface(stream[-1,:,:,0], title="stream at t=tf")
+#plot_surface(stream_z[-1,:,:,0], title="stream_z at t=tf")
 #plot_surface(V_x[-1,:,:,0], title="Vx at t=tf")
 #plot_surface(V_y[-1,:,:,0], title="Vy at t=tf")
-#plot_surface(vort[-1,:,:,0], title="vort at t=tf")
+#plot_surface(vort_z[-1,:,:,0], title="vort_z at t=tf")
 #plot_surface(epsi[-1,:,:,0], title="epsi at t=tf")
 
 ## Spectra (Spatial) :
@@ -78,7 +79,7 @@ r, radial_means = plot_radial_profile(
 )
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
-#save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(vort_z[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
 #save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
 
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
