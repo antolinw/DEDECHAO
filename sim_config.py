@@ -1,6 +1,7 @@
 # config.py
 import numpy as np
 from dataclasses import dataclass
+from pytorch_wavelets import DWTForward, DWTInverse
 
 @dataclass
 class SimulationConfig:
@@ -109,6 +110,8 @@ def build_derived_W_quantities(cfg: SimulationConfig):
     wave = cfg.wave
     mode = cfg.mode
     Jmax = np.log2(N)
+    dwt = DWTForward(J=J, wave=wave, mode=mode)
+    idwt = DWTInverse(wave=wave, mode=mode)
 
     if cfg.J > Jmax:
         raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
@@ -165,6 +168,8 @@ def build_derived_W_quantities(cfg: SimulationConfig):
         "J": J,
         "wave": wave,
         "mode": mode,
+        "dwt": dwt,
+        "idwt": idwt,
         "j": j,
         "k_j": k_j,
         "KX": KX,

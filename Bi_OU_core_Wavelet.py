@@ -64,13 +64,12 @@ def run_simulation_W(cfg, derived):
 
 def wavelet_noise(cfg, derived):
     N = derived["N"]
-    J = derived["J"]
-    wave = derived["wave"]
-    
+    dwt = derived["dwt"]
+  
     # Bruit ensembliste
     noise = torch.randn(cfg.n_ens, 1, N, N)
 
-    dwt = DWTForward(J=J, wave=wave, mode='periodization')
+
     A, D = dwt(noise)
 
     # Zero mean (eg B_hat[0, 0] = 0)
@@ -89,14 +88,13 @@ def wavelet_colored_noise(cfg, derived):
 
     N = derived["N"]
     J = derived["J"]
-    wave = derived["wave"]
+    dwt = derived["dwt"]
     dx = derived["Lx"] / (2 ** derived["n_order"])
     dy = dx
 
     # White noise in physical space (ensembliste)
     noise = torch.randn(cfg.n_ens, 1, N, N)
 
-    dwt = DWTForward(J=J, wave=wave, mode='periodization')
     A, D = dwt(noise)
 
     # Remove mean by zeroing approximate coefficients (k=0 analogue)
@@ -159,7 +157,7 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
 
 ###CMG velocity decomposed in 4 parts:
 def reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, derived):
-    idwt = DWTInverse(wave=derived["wave"], mode=derived["mode"])
+    idwt = derived["idwt"]
 
     B = idwt((B_A, B_D))[:, 0]        # (ens, N, N)
     lepsi = idwt((lepsi_A, lepsi_D))[:, 0]
