@@ -7,7 +7,8 @@ from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  compute_correlations_notime, plot_radial_profile, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n
+                 plot_spectrum_mean_std, zeta_n, compute_structure_function_polar, \
+                    plot_structure_function_polar
 
        
 cfg = SimulationConfig()
