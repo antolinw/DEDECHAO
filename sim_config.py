@@ -31,154 +31,109 @@ class SimulationConfig:
     # tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
+class Parameters(SimulationConfig): 
+    def __init__(self):
+        super().__init__()
 
-def build_derived_quantities(cfg: SimulationConfig):
-    N = 2 ** cfg.n_order
-    PN = N//2                                      # aliased wavevector index
+        N = 2 ** self.n_order
+        self.PN = N//2                                      # aliased wavevector index
 
-    z = (cfg.rho_s - 1) / (cfg.gamma_t - 1)        # scaling slope for time scale
-    theta_1 = cfg.rho_s + cfg.dim + 1              # spectrum slope of the bidirectionnal spatial spectrum
-    K_Lx = 2 * np.pi / cfg.Lx                      # largest-scale wavenumber
-    K_LS = 2 * np.pi / cfg.L_LS                    # large-scale wavenumber
+        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
+        theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
+        K_Lx = 2 * np.pi / self.Lx                      # largest-scale wavenumber
+        K_LS = 2 * np.pi / self.L_LS                           # large-scale wavenumber
+        self.K_LS = K_LS
 
-    np.random.seed(0)
+        np.random.seed(0)
 
-    # Spatial grid for doubly-periodic image
-    x_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
-    y_per = np.fft.fftfreq(N, d=1/cfg.Lx) 
-    X_per, Y_per = np.meshgrid(x_per, y_per, indexing="ij")
-    normX_per = np.sqrt(X_per**2 + Y_per**2)
+        # Wavenumbers
+        kx = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
+        ky = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
+        KX, KY = np.meshgrid(kx, ky, indexing="ij")
+        K = np.sqrt(KX**2 + KY**2)
 
-    # Wavenumbers
-    kx = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    ky = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    KX, KY = np.meshgrid(kx, ky, indexing="ij")
-    K = np.sqrt(KX**2 + KY**2)
+        # Spectrum
+        S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+        self.cleanAliasing(S1)
+        A = np.sqrt(S1)
 
-    # Spectrum
-    S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-    S1[0, 0] = 0
-    S1[PN, :] = 0
-    S1[:, PN] = 0
-    A = np.sqrt(S1)
+        self.wavelet = self.method == 'Wavelet'
+        if (self.method == 'Wavelet'): # Wavelet method
+            print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
+            self.Jmax = np.log2(N)
+            self.dx = self.Lx / (2 ** self.n_order)
+            dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
+            idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            if self.J > self.Jmax:
+                raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
+            
+            # j = np.arange(1, self.J + 1)
+            # Wavelet characteristic wavenumbers
+            self.j = np.arange(self.J)
+            self.k_j = K_Lx * (2.0 ** self.j)
+            
+            # ---------- OU time scales per scales ----------
+            tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
+            tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
+            # min_tau = min(tau_B.min(), tau_e.min())
+            # print(f"Smallest physical time: {min_tau}")
+            # print(f"Time step: dt = {self.Delta_t}")
 
-    # OU timescales
-    tau_B = cfg.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
-    tau_e = (cfg.tau_0e_factor * cfg.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - cfg.z_eps/2)
-    min_t = min([tau_B.min(),tau_e.min()])
-    print("The smallest physical time is = " + str(min_t))
-    print("The time step is : dt = " + str(cfg.Delta_t))
-    if min_t <= cfg.Delta_t :
-        print("ACHTUNG : the time step is too small to prevent aliasing !!!")
+            # if min_tau <= self.Delta_t:
+            #     print("ACHTUNG: time step may be too large!")
+            
+        elif (self.method == 'Fourier'): # Fourier method
+            print("Using Fourier method")
 
-    exp_B = np.exp(-cfg.Delta_t / tau_B)
-    noise_B = np.sqrt(1 - exp_B**2)
+            # OU timescales
+            tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
+            tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
-    exp_e = np.exp(-cfg.Delta_t / tau_e)
-    noise_e = np.sqrt(1 - exp_e**2)
+        else:
+            raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
-    np.seterr(divide = 'ignore') 
-    S2 = cfg.c2 * ( K / K_Lx ) ** (-1)
-    S2[0, 0] = 0
-    S2[PN, :] = 0
-    S2[:, PN] = 0
-    np.seterr(divide = 'warn') 
+        # TIme aliasing check
+        min_t = min([tau_B.min(),tau_e.min()])
+        print("The smallest physical time is = " + str(min_t))
+        print("The time step is : dt = " + str(self.Delta_t))
+        if min_t <= self.Delta_t :
+            print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
-    return {
-        "N": N,
-        "PN": PN,
-        "n_ens": cfg.n_ens,
-        "KX": KX,
-        "KY": KY,
-        "K": K,
-        "A": A,
-        "exp_B": exp_B,
-        "noise_B": noise_B,
-        "exp_e": exp_e,
-        "noise_e": noise_e,
-        "S2": S2,
-    }
+        exp_B = np.exp(-self.Delta_t / tau_B)
+        noise_B = np.sqrt(1 - exp_B**2)
 
-def build_derived_W_quantities(cfg: SimulationConfig): 
+        exp_e = np.exp(-self.Delta_t / tau_e)
+        noise_e = np.sqrt(1 - exp_e**2)
 
-    # ---------- Resolution ----------
-    n_order = cfg.n_order
-    N = 2 ** (n_order + 1)
-    PN = N // 2  
-    Lx = cfg.Lx
-    J = cfg.J
-    wave = cfg.wave
-    mode = cfg.mode
-    Jmax = np.log2(N)
-    dwt = DWTForward(J=J, wave=wave, mode=mode)
-    idwt = DWTInverse(wave=wave, mode=mode)
+        np.seterr(divide = 'ignore') 
+        S2 = self.c2 * ( K / K_Lx ) ** (-1)
+        self.cleanAliasing(S2)
+        np.seterr(divide = 'warn') 
 
-    if cfg.J > Jmax:
-        raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
-
-    j = np.arange(1, J + 1)
-
-    # ---------- Physical parameters ----------
-    z = (cfg.rho_s - 1) / (cfg.gamma_t - 1)   # scaling slope for time scale
-    theta_1 = cfg.rho_s + cfg.dim + 1         # spectrum slope of the bidirectionnal spatial spectrum
-
-    K_Lx = 2 * np.pi / cfg.Lx                 # largest-scale wavelet wavenumber
-    K_LS = 2 * np.pi / cfg.L_LS               # large-scale wavelet wavenumber
-
-    # Wavenumbers (Fourier) for spectral velocity computation
-    kx = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    ky = np.fft.fftfreq(N, d=cfg.Lx / N) * 2 * np.pi
-    KX, KY = np.meshgrid(kx, ky, indexing="ij")
-    K = np.sqrt(KX**2 + KY**2)
-
-    # Spectrum
-    S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-    S1[0, 0] = 0
-    S1[PN, :] = 0
-    S1[:, PN] = 0
-    A = np.sqrt(S1)
+        self.N = N
+        self.KX = KX[:,:,np.newaxis]
+        self.KY = KY[:,:,np.newaxis]
+        self.K = K[:,:,np.newaxis]
+        self.A = A[:,:,np.newaxis]
+        self.exp_B = exp_B[:,:,np.newaxis]
+        self.noise_B = noise_B[:,:,np.newaxis]
+        self.exp_e = exp_e[:,:,np.newaxis]
+        self.noise_e = noise_e[:,:,np.newaxis]
+        self.S2 = S2[:,:,np.newaxis]
     
-    # Wavelet characteristic wavenumbers
-    j = np.arange(cfg.J)
-    k_j = K_Lx * (2.0 ** j)
-    
-    # ---------- OU time scales per scales ----------
-    tau_B_j = cfg.tau_0B * (1 + (k_j / K_LS)**2) ** (-z / 2)
-    tau_e_j = (cfg.tau_0e_factor * cfg.tau_0B * (1 + (k_j / K_LS)**2) ** (-cfg.z_eps / 2))
-
-    # Stability check
-    min_tau = min(tau_B_j.min(), tau_e_j.min())
-    print(f"Smallest physical time: {min_tau}")
-    print(f"Time step: dt = {cfg.Delta_t}")
-
-    if min_tau <= cfg.Delta_t:
-        print("ACHTUNG: time step may be too large!")
+    def cleanAliasing(self,S1):
+        S1[0, 0] = 0
+        S1[self.PN, :] = 0
+        S1[:, self.PN] = 0
         
-    # ---------- OU coefficients (1D arrays) ----------
-    exp_B = np.exp(-cfg.Delta_t / tau_B_j)
-    noise_B = np.sqrt(1 - exp_B**2)
+    def zeroField(self):
+        zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+        return zeroF
 
-    exp_e = np.exp(-cfg.Delta_t / tau_e_j)
-    noise_e = np.sqrt(1 - exp_e**2)
-
-    return {
-        "N": N,
-        "Lx": Lx,
-        "n_order": n_order,
-        "J": J,
-        "wave": wave,
-        "mode": mode,
-        "dwt": dwt,
-        "idwt": idwt,
-        "j": j,
-        "k_j": k_j,
-        "KX": KX,
-        "KY": KY,
-        "K": K,
-        "A": A,
-        "exp_B": exp_B,
-        "noise_B": noise_B,
-        "exp_e": exp_e,
-        "noise_e": noise_e,
-        "theta_1": theta_1,
-    }
+    def zeroSpatialField(self):
+        zeroF = np.zeros((self.N, self.N, self.n_ens))
+        return zeroF
+    
+    def whiteNoise(self):
+        xi = np.random.randn(self.N, self.N, self.n_ens)
+        return xi

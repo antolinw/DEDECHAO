@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
-from sim_config import SimulationConfig, build_derived_quantities, build_derived_W_quantities
+from sim_config import Parameters
 from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
@@ -11,21 +11,18 @@ from plot import plot_img, plot_surface, plot_isotropic_psd, \
                     plot_structure_function_polar
 
        
-cfg = SimulationConfig()
+cfg = Parameters()
 c1 = cfg.c1
 c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
 
-if cfg.method == 'Fourier':
-    derived = build_derived_quantities(cfg)
-    V_x, V_y, stream, vort, epsi = run_simulation(cfg, derived)
-elif cfg.method == 'Wavelet':
-    derived = build_derived_W_quantities(cfg)
-    V_x, V_y, stream, vort, epsi = run_simulation_W(cfg, derived)
+if not cfg.wavelet:
+    V_x, V_y, stream, vort, epsi = run_simulation(cfg)
 else:
-    raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
+    V_x, V_y, stream, vort, epsi = run_simulation_W(cfg)
+
 
 ###################################### Plots ######################################
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
