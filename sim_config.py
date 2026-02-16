@@ -11,6 +11,7 @@ class SimulationConfig:
     Delta_t: float = 1e-3         # time step
     n_ens: int = 1                # ensemble size
     method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
+    #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
     J: int = 2                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
@@ -56,14 +57,15 @@ class Parameters(SimulationConfig):
         S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
         self.cleanAliasing(S1)
         A = np.sqrt(S1)
+        self.N = N
 
         self.wavelet = self.method == 'Wavelet'
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = np.log2(N)
             self.dx = self.Lx / (2 ** self.n_order)
-            dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
-            idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
+            self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
             if self.J > self.Jmax:
                 raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
             
@@ -71,7 +73,9 @@ class Parameters(SimulationConfig):
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
             self.k_j = K_Lx * (2.0 ** self.j)
+
             
+
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
             tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
@@ -81,7 +85,22 @@ class Parameters(SimulationConfig):
 
             # if min_tau <= self.Delta_t:
             #     print("ACHTUNG: time step may be too large!")
+            exp_B = np.exp(-self.Delta_t / tau_B)
+            noise_B = np.sqrt(1 - exp_B**2)
+
+            exp_e = np.exp(-self.Delta_t / tau_e)
+            noise_e = np.sqrt(1 - exp_e**2)
             
+            self.KX = KX
+            self.KY = KY
+            self.K = K
+            self.A = A
+
+            self.exp_B = exp_B
+            self.noise_B = noise_B
+            self.exp_e = exp_e
+            self.noise_e = noise_e
+
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
 
@@ -89,6 +108,20 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
+            np.seterr(divide = 'ignore') 
+            S2 = self.c2 * ( K / K_Lx ) ** (-1)
+            self.cleanAliasing(S2)
+            np.seterr(divide = 'warn') 
+
+            self.KX = KX[:,:,np.newaxis]
+            self.KY = KY[:,:,np.newaxis]
+            self.K = K[:,:,np.newaxis]
+            self.A = A[:,:,np.newaxis]
+            self.exp_B = exp_B[:,:,np.newaxis]
+            self.noise_B = noise_B[:,:,np.newaxis]
+            self.exp_e = exp_e[:,:,np.newaxis]
+            self.noise_e = noise_e[:,:,np.newaxis]
+            self.S2 = S2[:,:,np.newaxis]
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
@@ -99,27 +132,8 @@ class Parameters(SimulationConfig):
         if min_t <= self.Delta_t :
             print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
-        exp_B = np.exp(-self.Delta_t / tau_B)
-        noise_B = np.sqrt(1 - exp_B**2)
+        
 
-        exp_e = np.exp(-self.Delta_t / tau_e)
-        noise_e = np.sqrt(1 - exp_e**2)
-
-        np.seterr(divide = 'ignore') 
-        S2 = self.c2 * ( K / K_Lx ) ** (-1)
-        self.cleanAliasing(S2)
-        np.seterr(divide = 'warn') 
-
-        self.N = N
-        self.KX = KX[:,:,np.newaxis]
-        self.KY = KY[:,:,np.newaxis]
-        self.K = K[:,:,np.newaxis]
-        self.A = A[:,:,np.newaxis]
-        self.exp_B = exp_B[:,:,np.newaxis]
-        self.noise_B = noise_B[:,:,np.newaxis]
-        self.exp_e = exp_e[:,:,np.newaxis]
-        self.noise_e = noise_e[:,:,np.newaxis]
-        self.S2 = S2[:,:,np.newaxis]
     
     def cleanAliasing(self,S1):
         S1[0, 0] = 0
