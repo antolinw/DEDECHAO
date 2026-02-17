@@ -6,14 +6,14 @@ from pytorch_wavelets import DWTForward, DWTInverse
 @dataclass
 class SimulationConfig:
     # --------- Numerical ---------
-    n_order: int = 5              # N = 2^n_order = number of space steps along x
-    N_steps: int = 1000            # number of time steps
+    n_order: int = 9              # N = 2^n_order = number of space steps along x
+    N_steps: int = 2            # number of time steps
     Delta_t: float = 1e-3         # time step
     n_ens: int = 1                # ensemble size
     method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
-    J: int = 2                    # Number of level of decomposition for wavelet method
+    J: int = 5                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
 
@@ -74,8 +74,6 @@ class Parameters(SimulationConfig):
             self.j = np.arange(self.J)
             self.k_j = K_Lx * (2.0 ** self.j)
 
-            
-
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
             tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
@@ -113,6 +111,7 @@ class Parameters(SimulationConfig):
             self.cleanAliasing(S2)
             np.seterr(divide = 'warn') 
 
+            self.dx = self.Lx / (2 ** self.n_order)
             self.KX = KX[:,:,np.newaxis]
             self.KY = KY[:,:,np.newaxis]
             self.K = K[:,:,np.newaxis]

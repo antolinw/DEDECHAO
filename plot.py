@@ -714,50 +714,61 @@ def field_2D_polar(H, n_theta=-1):
     R_max = size[0]-1
     return cv2.warpPolar(H_t, size, origin, R_max, cv2.WARP_POLAR_LINEAR+cv2.INTER_CUBIC)
 
-def compute_structure_function_polar(H, moms=np.array([2, 3]), n_theta=-1):
+def compute_structure_function_polar(H, dx, l, L, nv=16, moms=np.array([2, 3]), n_theta=-1):
     '''
     Calcule les fonctions de structure d'ordre `moms` du champ H en coordonnées polaires.
     Retourne uniquement les moments demandés.
 
     Args:
-        H: Champ à analyser.
+        H: Champ à analyser (2D array).
+        dx; Pas de grille (taille d'un pixel).
+        l: Smallest scale
+        L: Integral scale
+        nv: Nombre de points pour la densité des échelles
         moms: Tableau des ordres des moments à calculer (ex: [2, 3, 4]).
         n_theta: Nombre de points dans la direction theta. Si -1, auto-détection.
 
     Returns:
         axis_t, axis_r, S_polar, S_Om: Axes et résultats pour chaque moment demandé.
     '''
+    N = H.shape[0]
 
-    # Définition des échelles
-    sizee = H.shape[0] // 5
-    scalesx = np.arange(-sizee, sizee + 1, 1)
-    scalesy = np.arange(-sizee, sizee + 1, 1)
+    # ---- échelles physiques log ----
+    r_phys = 2**np.arange(np.log2(l), np.log2(L), 1/nv)
 
-    # Initialisation des matrices pour chaque moment
+    # conversion en pixels
+    r_pix = np.unique((r_phys / dx).astype(int))
+
+    # garder seulement les valeurs valides
+    r_pix = r_pix[(r_pix > 0) & (r_pix < N//2)]
+
+    # échelles cartésiennes
+    scalesx = np.concatenate((-r_pix[::-1], [0], r_pix))
+    scalesy = scalesx.copy()
+
+    # ---- Initialisation ----
     S = {m: np.zeros((len(scalesy), len(scalesx))) for m in moms}
 
-    # Estimation des fonctions de structure pour chaque combinaison d'échelles
-    for isx in range(len(scalesx)):
-        for isy in range(len(scalesy)):
-            scalex = scalesx[isx]
-            scaley = scalesy[isy]
+    # ---- Boucle principale ----
+    for isx, scalex in enumerate(scalesx):
+        for isy, scaley in enumerate(scalesy):
 
             if scalex != 0 or scaley != 0:
                 incrs = Incrs_anisotropic_generator2d(H, scalex, scaley)
                 for m in moms:
                     S[m][isy, isx] = compute_moments_2D(incrs, moms=m)
-                    # Normalisation pour les moments d'ordre > 2
-                    # if m > 2:
-                    #     incrs_norm = (incrs - np.mean(incrs)) / np.std(incrs)
-                    #     S[m][isy, isx] = compute_moments_2D(incrs_norm, moms=m)
 
-    # Évite le zéro au centre
+    # ---- Centre ----
+    center = len(scalesx)//2    
     for m in moms:
-        S[m][sizee, sizee] = np.nan
-        S[m][sizee, sizee] = np.nanmean(S[m][sizee-1:sizee+2, sizee-1:sizee+2])
+        S[m][center, center] = np.nan
+        S[m][center, center] = np.nanmean(
+            S[m][center-1:center+2, center-1:center+2]
+        )
 
-    # Conversion en coordonnées polaires
+    # ---- Passage en polaire ----
     axis_t, axis_r, _ = polar_axis(S[moms[0]], n_theta=n_theta)
+
     S_polar = {m: field_2D_polar(S[m], n_theta=n_theta) for m in moms}
     S_Om = {m: np.sum(S_polar[m], axis=0) for m in moms}
 
@@ -766,13 +777,17 @@ def compute_structure_function_polar(H, moms=np.array([2, 3]), n_theta=-1):
 
 def plot_structure_function_polar(
     H,
+    dx,
+    l,
+    L,
+    nv=16,
     moms_to_plot=[2, 3],  # Par défaut, on trace S2 et S3
     slopes={},            # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
     title="Structure functions in polar coordinates",
     ref_r=None           # Point de référence pour l'alignement vertical
 ):
     # Calcule uniquement les moments demandés
-    axis_t, axis_r, S_polar, S_Om = compute_structure_function_polar(H, moms=moms_to_plot)
+    axis_t, axis_r, S_polar, S_Om = compute_structure_function_polar(H, dx, l, L, nv, moms=moms_to_plot)
 
     plt.figure(figsize=(8, 5))
 

@@ -17,6 +17,8 @@ c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
+L_LS = cfg.L_LS
+dx = cfg.dx
 
 if not cfg.wavelet:
     V_x, V_y, stream, vort, epsi = run_simulation(cfg)
@@ -98,3 +100,19 @@ plot_spectrum_mean_std(
     std_factor=1.0
 )
 
+tcurrent = 0
+img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
+
+plot_structure_function_polar(
+    img_norm,
+    dx=dx,
+    l=dx,
+    L=L_LS,
+    nv=64,
+    moms_to_plot=[2],  # Par défaut, on trace S2 et S3
+    slopes={2.0 : zeta_n(c1, c2, 2)},           # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
+    title="Structure functions in polar coordinates",
+    ref_r=1
+)
+
+#slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},           # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
