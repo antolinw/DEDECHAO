@@ -807,7 +807,7 @@ def plot_structure_function_polar(
                 axis_r,
                 norm_factor * axis_r**slope,
                 "--",
-                label=rf"$r^{{{slope}}}$ (normalisée)"
+                label=rf"$r^{{{slope}}}$ (ref of $S_{m}$)"
             )
 
     plt.xlabel("Radius r")

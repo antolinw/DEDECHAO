@@ -10,8 +10,8 @@ class SimulationConfig:
     N_steps: int = 2            # number of time steps
     Delta_t: float = 1e-3         # time step
     n_ens: int = 1                # ensemble size
-    method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
-    #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
+    #method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
+    method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
     J: int = 5                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
@@ -105,6 +105,12 @@ class Parameters(SimulationConfig):
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
+
+            exp_B = np.exp(-self.Delta_t / tau_B)
+            noise_B = np.sqrt(1 - exp_B**2)
+
+            exp_e = np.exp(-self.Delta_t / tau_e)
+            noise_e = np.sqrt(1 - exp_e**2)
 
             np.seterr(divide = 'ignore') 
             S2 = self.c2 * ( K / K_Lx ) ** (-1)
