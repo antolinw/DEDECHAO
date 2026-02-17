@@ -5,7 +5,6 @@ from sim_config import Parameters
 from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
-                 compute_correlations_notime, plot_radial_profile, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
                  plot_spectrum_mean_std, zeta_n, compute_structure_function_polar, \
                     plot_structure_function_polar
@@ -108,11 +107,12 @@ plot_structure_function_polar(
     dx=dx,
     l=dx,
     L=L_LS,
-    nv=64,
-    moms_to_plot=[2],  # Par défaut, on trace S2 et S3
-    slopes={2.0 : zeta_n(c1, c2, 2)},           # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
+    nv=16,
+    moms_to_plot=[2,4],  # Par défaut, on trace S2 et S3
+    slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},      
     title="Structure functions in polar coordinates",
     ref_r=1
 )
 
-#slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},           # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
+#slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},           
+#slopes={2.0 : zeta_n(c1, c2, 2)},   
