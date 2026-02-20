@@ -38,6 +38,7 @@ class Parameters(SimulationConfig):
 
         N = 2 ** self.n_order
         self.PN = N//2                                      # aliased wavevector index
+        self.dx = self.Lx / N
 
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
@@ -48,8 +49,8 @@ class Parameters(SimulationConfig):
         np.random.seed(0)
 
         # Wavenumbers
-        kx = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
-        ky = np.fft.fftfreq(N, d=self.Lx / N) * 2 * np.pi
+        kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
+        ky = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
         KX, KY = np.meshgrid(kx, ky, indexing="ij")
         K = np.sqrt(KX**2 + KY**2)
 
@@ -113,7 +114,8 @@ class Parameters(SimulationConfig):
             noise_e = np.sqrt(1 - exp_e**2)
 
             np.seterr(divide = 'ignore') 
-            S2 = self.c2 * ( K / K_Lx ) ** (-1)
+            self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
+            S2 = ( K / K_Lx ) ** (-1)
             self.cleanAliasing(S2)
             np.seterr(divide = 'warn') 
 

@@ -43,6 +43,8 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
     # B_real = (B_real - B_real.mean()) / B_real.std() # needed ???
 
     lepsi_real = np.fft.ifft2(lepsi_hat, axes=(0,1)).real
+    lepsi_real /= lepsi_real.std() 
+    lepsi_real *= np.sqrt( cfg.c2_eff )
     lepsi_real -= lepsi_real.var() 
     epsi = np.exp(lepsi_real)
 
