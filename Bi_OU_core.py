@@ -49,6 +49,7 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
     epsi = np.exp(lepsi_real)
 
     Bepsi_hat = np.fft.fft2(B_real * epsi, axes=(0,1))
+    cfg.cleanAliasing(Bepsi_hat)
 
     # ---- Velocity ----
     stream_hat = cfg.A * Bepsi_hat
