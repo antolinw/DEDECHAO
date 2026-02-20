@@ -589,12 +589,13 @@ def plot_structure_function_polar(
     plt.figure(figsize=(8, 5))
 
     for m in moms_to_plot:
-        plt.loglog(axis_r, axis_r * S_Om[m], label=rf"$S_{m}$ mean over $\theta$")
+        S_Om_temp = axis_r * S_Om[m]
+        plt.loglog(axis_r, axis_r * S_Om_temp, label=rf"omnidirectionnal $S_{m}$")
 
         if m in slopes:
             slope = slopes[m]
-            # Calcule la valeur de S_Om[m] au point de référence
-            ref_S_Om = np.interp(ref_r, axis_r, S_Om[m])
+            # Calcule la valeur de S_Om_temp au point de référence
+            ref_S_Om = np.interp(ref_r, axis_r, S_Om_temp)
             # Calcule la valeur de la référence au point de référence
             ref_ref = ref_r ** slope
             # Facteur de normalisation
@@ -609,6 +610,34 @@ def plot_structure_function_polar(
 
     plt.xlabel("Radius r")
     plt.ylabel("Structure function")
+    plt.title(title)
+    plt.grid(True, which="both", ls="--")
+    plt.legend()
+    plt.show()
+
+
+    # flatness
+    plt.figure(figsize=(8, 5))
+    flatness = (axis_r * S_Om[4]) / ( (axis_r * S_Om[2])**2 )
+    slope = slopes[4] - 2*slopes[2]
+
+    plt.loglog(axis_r, flatness, label=rf"flatness")
+    # Calcule la valeur de S_Om_temp au point de référence
+    ref_flatness = np.interp(ref_r, axis_r, flatness)
+    # Calcule la valeur de la référence au point de référence
+    ref_ref = ref_r ** slope
+    # Facteur de normalisation
+    norm_factor = ref_flatness / ref_ref
+    # Trace la courbe de référence normalisée
+    plt.loglog(
+        axis_r,
+        norm_factor * axis_r**slope,
+        "--",
+        label=rf"$r^{{{slope}}}$ (ref for flatness)"
+    )
+
+    plt.xlabel("Radius r")
+    plt.ylabel("Flatness")
     plt.title(title)
     plt.grid(True, which="both", ls="--")
     plt.legend()
