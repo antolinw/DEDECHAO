@@ -8,7 +8,6 @@ class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9              # N = 2^n_order = number of space steps along x
     N_steps: int = 2            # number of time steps
-    Delta_t: float = 1e-3         # time step
     n_ens: int = 1                # ensemble size
     method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
@@ -90,6 +89,8 @@ class Parameters(SimulationConfig):
             # print(f"Smallest physical time: {min_tau}")
             # print(f"Time step: dt = {self.Delta_t}")
 
+            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+
             # if min_tau <= self.Delta_t:
             #     print("ACHTUNG: time step may be too large!")
             exp_B = np.exp(-self.Delta_t / tau_B)
@@ -117,6 +118,8 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
+            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+
             exp_B = np.exp(-self.Delta_t / tau_B)
             noise_B = np.sqrt(1 - exp_B**2)
 
@@ -142,16 +145,8 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
-        # TIme aliasing check
-        min_t = min([tau_B.min(),tau_e.min()])
-        print("The smallest physical time is = " + str(min_t))
         print("The time step is : dt = " + str(self.Delta_t))
-        if min_t <= self.Delta_t :
-            print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
-        
-
-    
     def cleanAliasing(self,S1):
         S1[0, 0] = 0
         S1[self.PN, :] = 0
