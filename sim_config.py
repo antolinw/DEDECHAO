@@ -35,6 +35,14 @@ class SimulationConfig:
 class Parameters(SimulationConfig): 
     def __init__(self):
         super().__init__()
+    
+        #Checking core dynamical parameters (2D)
+        if (self.c2 >= self.c1 / 2) or (self.c1 >= 1.0):
+            raise ValueError("Parameters must repect : c2 < c1/2 and c1 < 1.0 for 2D simulations. " \
+                             + "Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
+        else:
+            print(f"Using consistent parameters: " \
+                  + "c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
         self.PN = N//2                                      # aliased wavevector index
