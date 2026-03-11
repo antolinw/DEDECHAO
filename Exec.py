@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
 from sim_config import Parameters
 from Bi_OU_core import run_simulation
+from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
-                 compute_correlations_notime, plot_radial_profile, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n
+                 plot_spectrum_mean_std, zeta_n, plot_structure_functions
 
        
 cfg = Parameters()
@@ -15,9 +15,14 @@ c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
+L_LS = cfg.L_LS
+dx = cfg.dx
 
-# Outputs
-V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
+if not cfg.wavelet:
+    V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
+else:
+    V_x, V_y, stream_z, vort_z, epsi = run_simulation_W(cfg)
+
 
 ###################################### Plots ######################################
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
@@ -52,31 +57,31 @@ krOU, psdOU = plot_isotropic_psd(
 )
 
 ## Structure functions computation :
-S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
+#S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
 
 ## Plot of structure functions as images :
-plot_img(S2x[0,:,:],title="S2")
+#plot_img(S2x[0,:,:],title="S2")
 
 ## Plot of radial S2 :
-r, radial_means = plot_radial_profile(
-   S2x[0, :, :],
-   slope= zeta_n(c1, c2, 2),
-   title="S2 Radial Intensity"
-)
+#r, radial_means = plot_radial_profile(
+#   S2x[0, :, :],
+#   slope= zeta_n(c1, c2, 2),
+#   title="S2 Radial Intensity"
+#)
 
 ## Plot of radial S3 :
-r, radial_means = plot_radial_profile(
-   S3x[0, :, :],
-   slope= zeta_n(c1, c2, 3),
-   title="S3 Radial Intensity"
-)
+#r, radial_means = plot_radial_profile(
+#   S3x[0, :, :],
+#   slope= zeta_n(c1, c2, 3),
+#   title="S3 Radial Intensity"
+#)
 
 ## Plot of radial S3 :
-r, radial_means = plot_radial_profile(
-   Fx[0, :, :],
-   slope= zeta_n(c1, c2, 4) - 2*zeta_n(c1, c2, 2),
-   title="Flatness"
-)
+#r, radial_means = plot_radial_profile(
+#   Fx[0, :, :],
+#   slope= zeta_n(c1, c2, 4) - 2*zeta_n(c1, c2, 2),
+#   title="Flatness"
+#)
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
 #save_field_gif_matplotlib(vort_z[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
@@ -101,3 +106,19 @@ plot_spectrum_mean_std(
     std_factor=1.0
 )
 
+tcurrent = 0
+img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
+img_norm_t_evolve = np.sqrt(V_x**2 + V_y**2) 
+save_field_gif_matplotlib(img_norm_t_evolve, filename="normV.gif", fps=15)
+
+plot_structure_functions(
+    signal=img_norm,
+    small_scale=dx,
+    large_scale=L_LS,
+    nv=16,
+    Nreal=101,
+    L_norm=512,
+    c1=c1,
+    c2=c2,
+    pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
+)

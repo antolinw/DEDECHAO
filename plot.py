@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from scipy.stats import kurtosis, skew
+from scipy.stats import kurtosis, skew, norm
+import cv2
 
 def zeta_n(c1, c2, n):
     return c1*n - c2*n*(n-2)/2
@@ -134,209 +135,6 @@ def plot_isotropic_psd(
     plt.show()
 
     return kr, psd
-
-def Incrs_anisotropic_generator2d(image, scalex, scaley):
-    # check parameters
-    if  image.ndim != 2 :
-        raise TypeError('Image must be two dimensional.\n')
-   
-    image2=np.roll(image , scaley, axis=0)
-    image2=np.roll(image2, scalex, axis=1)
-   
-    if scaley>=0 and scalex>=0:
-        incr=-(image2[scaley::,scalex::]-image[scaley::,scalex::])
-    elif scaley<0 and scalex<0:
-        incr=-(image2[:scaley,:scalex]-image[:scaley,:scalex])
-    elif scaley>=0 and scalex<0:
-        incr=-(image2[scaley::,:scalex]-image[scaley::,:scalex])
-    elif scaley<0 and scalex>=0:
-        incr=-(image2[:scaley,scalex::]-image[:scaley,scalex::])
-   
-    return incr
-
-def correlations_notime(data,scale_xlim, scale_ylim, dcx, dcy, Nanalyse, Nreal, scaleth):
-    #data=np.load(path+file)
-    #u=data['uf']
-    u=data
-    uabs=np.linalg.norm(u,axis=0)
-
-    # Standard deviation estimations
-    sigmax=np.std(u[:,:])
-    sigmaabs=np.std(uabs)
-
-    # Normalization
-    u[:,:]=(u[:,:])/sigmaabs
-    uabs=uabs/sigmaabs
-    l1,l2=u.shape
-    u=u+np.random.normal(0,10**-4,(l1,l2))
-    ux=np.squeeze(u[:,:])
-    uabs=uabs+np.random.normal(0,10**-4,(uabs.shape))
-    N=len(ux)
-    # Definition of scales
-    scalesx=np.arange(-scale_xlim,scale_xlim+1,dcx)
-    scalesy=np.arange(-scale_ylim,scale_ylim+1,dcy)
-
-    # Initialization of matrix
-    S2_x=np.zeros((Nreal, len(scalesx),len(scalesy)))
-    Flat_x=np.zeros((Nreal, len(scalesx),len(scalesy)))
-    S3_x=np.zeros((Nreal, len(scalesx),len(scalesy)))    
-    # Estimation of entropy (and number of samples for entropy estimation) for each combination of scales (scalex,scaley)
-    for isx in range(len(scalesx)):
-        for isy in range(len(scalesy)): 
-            scalex=scalesx[isx]
-            scaley=scalesy[isy]
-       
-            if scalex!=0 or scaley !=0:
-                # Generation of increments
-                incrsx = Incrs_anisotropic_generator2d(ux, scalex, scaley)
-                
-                # Theiler + random permutation + reshape
-                incrsx=incrsx[0:-1:scaleth,0:-1:scaleth].flatten()
-                incrsx = np.random.permutation(incrsx)[0:int(len(incrsx)/Nanalyse)*Nanalyse].reshape(-1,Nanalyse)
-           
-                for ir in range(Nreal):
-                    S2_x[ir,isy,isx] = np.mean(incrsx[ir,:]**2)
-                    Flat_x[ir,isy,isx] = kurtosis(incrsx[ir,:], fisher=False, bias=False)
-                    S3_x[ir,isy,isx] = np.mean(np.abs(incrsx[ir,:])**3)
-               
-    return S2_x, Flat_x, S3_x
-
-def compute_correlations_notime(
-    field,
-    scale_lim=2**7,
-    scale_step=5,
-    scale_th=5,
-    nb_realisation=1,
-    N_ana=2**8
-):
-    """
-    Compute structure-function-based correlations without time => on a single image at t=t0.
-
-    Parameters
-    ----------
-    field : 2D ndarray
-        Input field
-    scale_lim : int
-        Maximum scale
-    scale_step : int
-        Scale step
-    scale_th : int
-        Threshold scale
-    nb_realisation : int
-        Number of realizations
-    N_ana : int
-        Analysis grid size
-
-    Returns
-    -------
-    S2, F, S3 : arrays
-        Correlation outputs
-    """
-    S2, F, S3 = correlations_notime(
-        field,
-        scale_lim, scale_lim,
-        scale_step, scale_step,
-        N_ana,
-        nb_realisation,
-        scale_th
-    )
-
-    return S2, F, S3
-
-def radial_average_2d(img):
-    """
-    Radial average of a 2D image around its center. 
-    May be optimised as the 2D spectrum to avoid the loop.
-    Not generalized for ensemble at the moment.
-
-    Parameters
-    ----------
-    img : 2D ndarray
-
-    Returns
-    -------
-    r : ndarray
-        Radius (pixels)
-    radial_mean : ndarray
-        Mean value at each radius
-    """
-    h, w = img.shape
-    cy, cx = (h - 1) / 2, (w - 1) / 2
-
-    y, x = np.indices(img.shape)
-    dist = np.sqrt((x - cx)**2 + (y - cy)**2)
-    r = dist.astype(int)
-
-    rmax = r.max()
-    radial_mean = np.zeros(rmax + 1)
-
-    for radius in range(rmax + 1):
-        mask = (r == radius)
-        radial_mean[radius] = img[mask].mean()
-
-    r_dist = np.arange(len(radial_mean))
-    return r_dist, radial_mean
-
-def plot_radial_profile_s(
-    img,
-    slope=None,
-    slope_prefactor=1.0,
-    slope_label=None,
-    xlim=(1, 40),
-    title="Radial Intensity"
-):
-    r, profile = radial_average_2d(img)
-
-    plt.figure()
-    plt.loglog(r[1:], profile[1:], label="Radial mean")
-
-    if slope is not None:
-        plt.loglog(
-            r,
-            slope_prefactor * r**slope,
-            "r--",
-            label=slope_label if slope_label else rf"$r^{{{slope}}}$"
-        )
-
-    plt.xlabel("Radius (pixels)")
-    plt.ylabel("Mean intensity")
-    plt.title(title)
-    plt.xlim(*xlim)
-    plt.grid(True, which="both")
-    plt.legend()
-    plt.show()
-
-    return r, profile   
-
-def plot_radial_profile(
-    img,
-    slope=None,
-    slope_label=None,
-    xlim=(1, 40),
-    title="Radial Intensity"
-):
-    r, profile = radial_average_2d(img)
-    slope_prefactor = profile[1]
-    plt.figure()
-    plt.loglog(r[1:], profile[1:], label="Radial mean")
-
-    if slope is not None:
-        plt.loglog(
-            r[1:],
-            slope_prefactor * r[1:]**slope,
-            "r--",
-            label=slope_label if slope_label else rf"$r^{{{slope}}}$"
-        )
-
-    plt.xlabel("Radius (pixels)")
-    plt.ylabel("Mean intensity")
-    plt.title(title)
-    plt.xlim(*xlim)
-    plt.grid(True, which="both")
-    plt.legend()
-    plt.show()
-
-    return r, profile 
 
 def save_field_gif_matplotlib(field,
                               filename="field.gif",
@@ -554,3 +352,165 @@ def plot_spectrum_mean_std(
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
     plt.show()
+
+def _compute_structure_functions(signal, small_scale, large_scale, nv, Nreal):
+    """
+    Internal computation function.
+    """
+
+    N = signal.shape[0]
+
+    # --- Log scales ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
+
+    r_pix = np.unique((r_phys / small_scale).astype(int))
+    r_pix = r_pix[(r_pix > 0) & (r_pix < N//2)]
+    scales = r_pix
+
+    S2_rows  = np.zeros((Nreal, len(scales)))
+    S2_cols  = np.zeros((Nreal, len(scales)))
+    Kurt_rows = np.zeros((Nreal, len(scales)))
+    Kurt_cols = np.zeros((Nreal, len(scales)))
+
+    for isc, scale in enumerate(scales):
+
+        # Rows
+        incrs = (signal[:-scale, :] - signal[scale:, :]).ravel()
+        np.random.shuffle(incrs)
+        usable = Nreal * (len(incrs) // Nreal)
+        incrs = incrs[:usable].reshape(Nreal, -1)
+
+        S2_rows[:, isc]  = np.var(incrs, axis=1)
+        Kurt_rows[:, isc] = kurtosis(incrs, axis=1,
+                                     fisher=False, bias=False)
+
+        # Columns
+        incrs = (signal[:, :-scale] - signal[:, scale:]).ravel()
+        np.random.shuffle(incrs)
+        usable = Nreal * (len(incrs) // Nreal)
+        incrs = incrs[:usable].reshape(Nreal, -1)
+
+        S2_cols[:, isc]  = np.var(incrs, axis=1)
+        Kurt_cols[:, isc] = kurtosis(incrs, axis=1,
+                                     fisher=False, bias=False)
+
+    return scales, S2_rows, S2_cols, Kurt_rows, Kurt_cols
+
+def plot_structure_functions(signal,
+                             small_scale,
+                             large_scale,
+                             nv=16,
+                             Nreal=100,
+                             L_norm=None,
+                             c1=None,
+                             c2=None,
+                             pdf_scales_indices=(0, 5, 10, 15)):
+    """
+    Compute structure functions and plot:
+    - S2
+    - Kurtosis
+    - PDFs of normalized increments for selected scales
+    """
+
+    scales, S2_r, S2_c, K_r, K_c = _compute_structure_functions(
+        signal, small_scale, large_scale, nv, Nreal
+    )
+
+    if L_norm is None:
+        L_norm = signal.shape[0]
+
+    x = np.log(scales / L_norm)
+
+    # =========================
+    # S2
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(np.log(S2_r), axis=0),
+                 np.std(np.log(S2_r), axis=0),
+                 color='b', label=r"S$^{\perp}_2$")
+
+    plt.errorbar(x,
+                 np.mean(np.log(S2_c), axis=0),
+                 np.std(np.log(S2_c), axis=0),
+                 color='r', linestyle=":", label=r"S$^{\parallel}_2$")
+
+    if c1 is not None:
+        plt.plot(x, 2 * c1 * x + 13.3, 'k--', label=r"$(\frac{l}{L})^{2c_1}$")
+    plt.xlabel(r"$\log(l/L)$")
+    plt.ylabel(r"$\log(S_2)$")
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # Flatness
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(np.log(K_r/3), axis=0),
+                 np.std(np.log(K_r/3), axis=0),
+                 color='b', label=r"$\frac{F^{\perp}(l)}{3}$")
+
+    plt.errorbar(x,
+                 np.mean(np.log(K_c/3), axis=0),
+                 np.std(np.log(K_c/3), axis=0),
+                 color='r', linestyle=":", label=r"$\frac{F^{\parallel}(l)}{3}$")
+
+    if c2 is not None:
+        plt.plot(x, -4 * c2 * x - 0.3, 'k--', label=r"$(\frac{l}{L})^{-4c_2}$")
+
+    plt.xlabel(r"$\log(l/L)$")
+    plt.ylabel(r"$\log(\frac{F}{3})$")
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # PDFs des incréments
+    # =========================
+    plt.figure()
+
+    vertical_spacing = 5  # decalage entre courbes
+    ncurves = len(pdf_scales_indices)
+
+    for i, idx in enumerate(pdf_scales_indices):
+        if idx >= len(scales):
+            continue
+
+        scale = scales[idx]
+
+        incr = (signal[:-scale, :] - signal[scale:, :]).ravel()
+        incr = (incr - np.mean(incr)) / np.std(incr)
+
+        nbins = 120
+        hist, bins = np.histogram(incr, bins=nbins, density=False)
+
+        centers = 0.5 * (bins[1:] + bins[:-1])
+        bin_width = bins[1] - bins[0]
+
+        pdf = hist / (np.sum(hist) * bin_width)
+
+        # enlever bins mal résolus
+        mask = hist > 10
+        centers = centers[mask]
+        pdf = pdf[mask]
+
+        # Décalage multiplicatif
+        shift_factor = vertical_spacing ** (ncurves - i - 1)
+        pdf_shifted = pdf * shift_factor
+
+        plt.scatter(centers, pdf_shifted,
+                    s=15,
+                    alpha=0.7,
+                    label=f"l={scale}")
+
+    plt.yscale("log")
+    plt.xlabel(r"$\delta u / \sigma$")
+    plt.ylabel("PDF (offset)")
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show()
+
+    return scales, S2_r, S2_c, K_r, K_c

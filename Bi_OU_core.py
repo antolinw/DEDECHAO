@@ -51,12 +51,16 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
     if cfg.dim == 3:
         lepsi_real = np.fft.ifft(lepsi_real, axis=2).real
         lepsi_real = lepsi_real[:,:,:,:,np.newaxis]
+    # Set the correct variance (related to c2)
+    lepsi_real /= lepsi_real.std() 
+    lepsi_real *= np.sqrt( cfg.c2_eff )
     lepsi_real -= lepsi_real.var() 
     epsi = np.exp(lepsi_real)
 
     Bepsi_hat = np.fft.fft2(B_real * epsi, axes=(0,1))
     if cfg.dim == 3:
         Bepsi_hat = np.fft.fft(Bepsi_hat, axis=2) 
+    cfg.cleanAliasing(Bepsi_hat)
 
     # ---- Velocity ----
     stream_hat = cfg.A * Bepsi_hat
