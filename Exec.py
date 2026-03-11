@@ -6,7 +6,8 @@ from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n, plot_structure_functions
+                 plot_spectrum_mean_std, zeta_n, compute_structure_function_polar, \
+                    plot_structure_function_polar
 
        
 cfg = Parameters()
@@ -76,8 +77,8 @@ krOU, psdOU = plot_isotropic_psd(
 #)
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
-#save_field_gif_matplotlib(vort[:,:,:,0], filename="F_Vort_r-1p9_c2-0p15_zeps-1.gif", fps=15)
-#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-1p9_c2-0p15_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
 
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
 signal = V_x[:, :, :, 0]
@@ -91,27 +92,27 @@ w, ke_hat = compute_spectrum(signal, cfg.Delta_t)
 #plot_spectrum(w, ke_mean, slope=-gamma)
 
 ### Plot spectrum with mean and std
-#plot_spectrum_mean_std(
-#    w,
-#    ke_hat,
-#    slope=-gamma,
-#    std_factor=1.0
-#)
-
-tcurrent = 3
-img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
-img_norm_t_evolve = np.sqrt(V_x**2 + V_y**2) 
-
-#save_field_gif_matplotlib(img_norm_t_evolve, filename="F_norm_r-1p9_c2-0p15_zeps-1.gif", fps=15)
-
-plot_structure_functions(
-    signal=img_norm,
-    small_scale=dx,
-    large_scale=L_LS,
-    nv=16,
-    Nreal=101,
-    L_norm=512,
-    c1=c1,
-    c2=c2,
-    pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
+plot_spectrum_mean_std(
+    w,
+    ke_hat,
+    slope=-gamma,
+    std_factor=1.0
 )
+
+tcurrent = 0
+img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
+
+plot_structure_function_polar(
+    img_norm,
+    dx=dx,
+    l=dx,
+    L=L_LS,
+    nv=16,
+    moms_to_plot=[2,4],  # Par défaut, on trace S2 et S3
+    slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},      
+    title="Structure functions in polar coordinates",
+    ref_r=1
+)
+
+#slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},           
+#slopes={2.0 : zeta_n(c1, c2, 2)},   

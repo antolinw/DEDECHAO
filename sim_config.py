@@ -7,51 +7,43 @@ from pytorch_wavelets import DWTForward, DWTInverse
 class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9              # N = 2^n_order = number of space steps along x
-    N_steps: int = 5          # number of time steps
-    Delta_t: float = 1e-5         # time step
+    N_steps: int = 2            # number of time steps
+    Delta_t: float = 1e-3         # time step
     n_ens: int = 1                # ensemble size
     method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
-    J: int = 9                    # Number of level of decomposition for wavelet method
+    J: int = 5                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
 
     # --------- Physical ---------
-    Lx: float = 2                  # domain size
-    L_LS: float = 100 * Lx         # large spatial scale
+    Lx: float = 2                 # domain size
+    L_LS: float = 0.5 * Lx        # large spatial scale
 
-    dim: float = 2.0               # spatial dimension
-    c2: float = 0.025              # intermittency coefficient (must be < c1 /2, ]0,0.5[ in 2D)
-    rho_s: float = 1.66            # spatial spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
-    gamma_t: float = rho_s         # temporal spectrum slope
-    #c1 = (rho_s + dim - 2) / 2    # fractal exponent
-    c1 = (rho_s + dim - 3) / 2.    # fractal exponent (2D corr) - 1 
+    dim: float = 2.0              # spatial dimension
+    c2: float = 0.1               # intermittency coefficient
+    rho_s: float = 2.0            # spatial spectrum slope
+    gamma_t: float = rho_s        # temporal spectrum slope
+    c1 = (rho_s + dim - 2) / 2    # fractal exponent
 
-    tau_0B: float = 1
+    tau_0B: float = 1.0
     tau_0e_factor: float = np.inf # steady intermittency
-    #tau_0e_factor: float = 2.0  # unsteady intermittency
+    # tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
 class Parameters(SimulationConfig): 
     def __init__(self):
         super().__init__()
-    
-        #Checking core dynamical parameters (2D)
-        if (self.c2 >= self.c1 / 2) or (self.c1 >= 1.0):
-            raise ValueError("Parameters must repect : c2 < c1/2 and c1 < 1.0 for 2D simulations. Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
-
-        else:
-            print(f"Using consistent parameters: c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
-        self.PN = N//2                                 # aliased wavevector index
+        self.PN = N//2                                      # aliased wavevector index
         self.dx = self.Lx / N
 
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
-        K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
-        K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
+        K_Lx = 2 * np.pi / self.Lx                      # largest-scale wavenumber
+        K_LS = 2 * np.pi / self.L_LS                           # large-scale wavenumber
         self.K_LS = K_LS
 
         np.random.seed(0)
@@ -90,8 +82,6 @@ class Parameters(SimulationConfig):
             # print(f"Smallest physical time: {min_tau}")
             # print(f"Time step: dt = {self.Delta_t}")
 
-            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
-
             # if min_tau <= self.Delta_t:
             #     print("ACHTUNG: time step may be too large!")
             exp_B = np.exp(-self.Delta_t / tau_B)
@@ -118,8 +108,6 @@ class Parameters(SimulationConfig):
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
-
-            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
 
             exp_B = np.exp(-self.Delta_t / tau_B)
             noise_B = np.sqrt(1 - exp_B**2)
@@ -150,10 +138,12 @@ class Parameters(SimulationConfig):
         min_t = min([tau_B.min(),tau_e.min()])
         print("The smallest physical time is = " + str(min_t))
         print("The time step is : dt = " + str(self.Delta_t))
-
         if min_t <= self.Delta_t :
             print("ACHTUNG : the time step is too small to prevent aliasing !!!")
 
+        
+
+    
     def cleanAliasing(self,S1):
         S1[0, 0] = 0
         S1[self.PN, :] = 0
