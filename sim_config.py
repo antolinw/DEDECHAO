@@ -17,13 +17,13 @@ class SimulationConfig:
     mode: str = 'periodization'
 
     # --------- Physical ---------
-    Lx: float = 2                 # domain size
-    L_LS: float = 0.5 * Lx        # large spatial scale
+    Lx: float = 2                  # domain size
+    L_LS: float = 0.5 * Lx         # large spatial scale
 
-    dim: float = 2.0              # spatial dimension
-    c2: float = 0.025              # intermittency coefficient
-    rho_s: float = 1.66            # spatial spectrum slope
-    gamma_t: float = rho_s        # temporal spectrum slope
+    dim: float = 2.0               # spatial dimension
+    c2: float = 0.025              # intermittency coefficient (must be < c1 /2, ]0,0.5[ in 2D)
+    rho_s: float = 1.66            # spatial spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
+    gamma_t: float = rho_s         # temporal spectrum slope
     c1 = (rho_s - 1) / 2.          # fractal exponent
 
     tau_0B: float = 1.0
@@ -44,13 +44,13 @@ class Parameters(SimulationConfig):
                   + "c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
-        self.PN = N//2                                      # aliased wavevector index
+        self.PN = N//2                                 # aliased wavevector index
         self.dx = self.Lx / N
 
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
-        K_Lx = 2 * np.pi / self.Lx                      # largest-scale wavenumber
-        K_LS = 2 * np.pi / self.L_LS                           # large-scale wavenumber
+        K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
+        K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
         self.K_LS = K_LS
 
         np.random.seed(0)
