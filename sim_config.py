@@ -7,12 +7,12 @@ from pytorch_wavelets import DWTForward, DWTInverse
 class SimulationConfig:
     # --------- Numerical ---------
     n_order: int = 9              # N = 2^n_order = number of space steps along x
-    N_steps: int = 2            # number of time steps
+    N_steps: int = 128            # number of time steps
     n_ens: int = 1                # ensemble size
     method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     #method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
-    J: int = 5                    # Number of level of decomposition for wavelet method
+    J: int = 9                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
 
@@ -21,8 +21,8 @@ class SimulationConfig:
     L_LS: float = 0.5 * Lx        # large spatial scale
 
     dim: float = 2.0              # spatial dimension
-    c2: float = 0.1               # intermittency coefficient
-    rho_s: float = 2.0            # spatial spectrum slope
+    c2: float = 0.025              # intermittency coefficient
+    rho_s: float = 1.66            # spatial spectrum slope
     gamma_t: float = rho_s        # temporal spectrum slope
     c1 = (rho_s - 1) / 2.          # fractal exponent
 
