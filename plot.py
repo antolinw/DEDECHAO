@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from scipy.stats import kurtosis, skew
+from scipy.stats import kurtosis, skew, norm
 import cv2
 
 def zeta_n(c1, c2, n):
@@ -353,292 +353,164 @@ def plot_spectrum_mean_std(
     plt.savefig(filename, dpi=300)
     plt.show()
 
-
-### New structure functions (not used in the main code) ###
-def Incrs_anisotropic_generator2d(image, scalex, scaley):
-    '''    
-    This function generate a vector of increments at a given scale_x, scale_y from a 2d image
- 
-    
-    incrs = Incrs_anisotropic_generator2d(image, scalex, scaley)
-    
-    Input arguments :
-        
-        image  : image to analyze
-        scalex    : size of scale in x dim
-        scaley    : size of scale in y dim
-        
-    Output arguments :
-        
-        incr : vector of increments to compute statistics
-        
-    Usage example :
-        
-        image=np.random.randn((1000,1000))
-        incr = Incrs_anisotropic_generator2d(image,scalex, scaley)
-
-    Comments: In python first dimension is vertical alignment (y direction in this program). Second dimension is horizontal alignment (x direction)
-
-    Comments: If image=array([[1, 2, 3],
-                              [4, 5, 6],
-                              [7, 8, 9]])
-    
-    scalex=scaley=1 then: image2=array([[9, 7, 8],
-                                       [3, 1, 2],
-                                       [6, 4, 5]])
-    and so to define the increments such as Frisch 1995 (x(r+l) -x(r)) we have to define image -image2.
-    
-
-    ##
-    C. Granero-Belinchon (IMT- Atlantique), September 2021
- 
-    '''  
-    # check parameters
-    if  image.ndim != 2 :
-        raise TypeError('Image must be two dimensional.\n')
-    
-    image2=np.roll(image , scaley, axis=0)
-    image2=np.roll(image2, scalex, axis=1)
-    
-    if scaley>=0 and scalex>=0:
-        incr=-(image2[scaley::,scalex::]-image[scaley::,scalex::])
-    elif scaley<0 and scalex<0:
-        incr=-(image2[:scaley,:scalex]-image[:scaley,:scalex])
-    elif scaley>=0 and scalex<0:
-        incr=-(image2[scaley::,:scalex]-image[scaley::,:scalex])
-    elif scaley<0 and scalex>=0:
-        incr=-(image2[:scaley,scalex::]-image[:scaley,scalex::])
-    
-    return incr
-
-def compute_moments_2D(data, moms=np.array((2,3))):
+def _compute_structure_functions(signal, small_scale, large_scale, nv, Nreal):
     """
-    Function Moms = compute_moments_2D(data, moms) estimates the statistical moments of order moms of the given ''data''
-
-    Input arguments :
-        data   : signal of length Nx x Ny
-        moms     : (1d array) order of the moments to estimate (default=np.array((2,3)))
-    
-    Output :
-        Moms    : moments of the sampled image, len(moms) moments are returned
-        
-    Usage example :
-        
-        data=np.random.randn((1000,1000))
-        incr = compute_moments_2D(data, moms=2)
-    
-    ##
-    C. Granero-Belinchon (IMT- Atlantique), N.B Garnier (ENS Lyon), October 2021  
+    Internal computation function.
     """
-    
-    m = np.array(moms).flatten()
-    Moments=np.zeros(len(m)) # Initialization of moments matrix 
-    
-    for i in range(len(m)):      
-            Moments[i]=np.nanmean(data.flatten()**m[i]) 
-             
-    return Moments
 
-def polar_axis(data, n_theta=-1):
-    '''    
-    This function returns 2 numpy arrays characterizing the polar coordinates 
-    of the output field of the function field_2D_polar:
- 
-    axis_t, axis_r, size = polar_axis(data, n_theta=-1)
+    N = signal.shape[0]
 
-    Input arguments :
-        
-        data  : image to analyze
-        n_theta : nb points desired in the theta direction if =-1: auto-detect (as R_max*pi) 
-        
-    Output arguments :
-        
-        axis_t : vector of angles
-        axis_r : vector of radius
-        size : shape of field in polar coordinates
-        
-    Usage example :
-        
-        image=np.random.randn((1000,1000))
-        axis_t, axis_r, size = polar_axis(image, n_theta=-1)
+    # --- Log scales ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
 
-   
-    ##
-    N.B Garnier (ENS Lyon) and C. Granero-Belinchon (IMT- Atlantique), September 2021
- 
-    '''  
-
-    Nx,Ny = data.shape
-    R_max = min(Nx//2,Ny//2)
-    N_theta = n_theta if n_theta>0 else (int)(R_max*np.pi)
-    size  = (R_max+1, N_theta)      # N_theta pts in [0,2*pi[ and R (tau) in [O, R_max]
-    axis_t= np.arange(N_theta)/N_theta*2*np.pi - np.pi/2
-    axis_r= np.arange(R_max+1)
-    return axis_t, axis_r, size
-
-   
-def field_2D_polar(H, n_theta=-1):    
-    '''    
-    This function returns the cartesian field H in polar coordinates. The center of the field is used as origin.
-    First dimension is the angle in [0, 2*pi[, second dimension is the radius in [0, R_max]
- 
-    H_polar = field_2D_polar(H, n_theta=-1)
-
-    Input arguments :
-        
-        H  : field to analyze
-        n_theta : nb points desired in the theta direction if =-1: auto-detect (as R_max*pi) 
-        
-    Output arguments :
-        
-        H_polar : H field in polar coordinates
-        
-    Usage example :
-        
-        image=np.random.randn((1000,1000))
-        image_polar = field_2D_polar(image, n_theta=-1)
-
-   
-    ##
-    N.B Garnier (ENS Lyon) and C. Granero-Belinchon (IMT- Atlantique), September 2021
- 
-    '''  
-
-    Nx,Ny = H.shape
-    H_t= np.transpose(H) # cv2 works on images, which are transposed of matrices
-    origin= (Nx//2, Ny//2) 
-    axis_t, axis_r, size = polar_axis(H, n_theta)
-    R_max = size[0]-1
-    return cv2.warpPolar(H_t, size, origin, R_max, cv2.WARP_POLAR_LINEAR+cv2.INTER_CUBIC)
-
-def compute_structure_function_polar(H, dx, l, L, nv=16, moms=np.array([2, 3]), n_theta=-1):
-    '''
-    Calcule les fonctions de structure d'ordre `moms` du champ H en coordonnées polaires.
-    Retourne uniquement les moments demandés.
-
-    Args:
-        H: Champ à analyser (2D array).
-        dx; Pas de grille (taille d'un pixel).
-        l: Smallest scale
-        L: Integral scale
-        nv: Nombre de points pour la densité des échelles
-        moms: Tableau des ordres des moments à calculer (ex: [2, 3, 4]).
-        n_theta: Nombre de points dans la direction theta. Si -1, auto-détection.
-
-    Returns:
-        axis_t, axis_r, S_polar, S_Om: Axes et résultats pour chaque moment demandé.
-    '''
-    N = H.shape[0]
-
-    # ---- échelles physiques log ----
-    r_phys = 2**np.arange(np.log2(l), np.log2(L), 1/nv)
-
-    # conversion en pixels
-    r_pix = np.unique((r_phys / dx).astype(int))
-
-    # garder seulement les valeurs valides
+    r_pix = np.unique((r_phys / small_scale).astype(int))
     r_pix = r_pix[(r_pix > 0) & (r_pix < N//2)]
+    scales = r_pix
 
-    # échelles cartésiennes
-    scalesx = np.concatenate((-r_pix[::-1], [0], r_pix))
-    scalesy = scalesx.copy()
+    S2_rows  = np.zeros((Nreal, len(scales)))
+    S2_cols  = np.zeros((Nreal, len(scales)))
+    Kurt_rows = np.zeros((Nreal, len(scales)))
+    Kurt_cols = np.zeros((Nreal, len(scales)))
 
-    # ---- Initialisation ----
-    S = {m: np.zeros((len(scalesy), len(scalesx))) for m in moms}
+    for isc, scale in enumerate(scales):
 
-    # ---- Boucle principale ----
-    for isx, scalex in enumerate(scalesx):
-        for isy, scaley in enumerate(scalesy):
+        # Rows
+        incrs = (signal[:-scale, :] - signal[scale:, :]).ravel()
+        np.random.shuffle(incrs)
+        usable = Nreal * (len(incrs) // Nreal)
+        incrs = incrs[:usable].reshape(Nreal, -1)
 
-            if scalex != 0 or scaley != 0:
-                incrs = Incrs_anisotropic_generator2d(H, scalex, scaley)
-                for m in moms:
-                    S[m][isy, isx] = compute_moments_2D(incrs, moms=m)
+        S2_rows[:, isc]  = np.var(incrs, axis=1)
+        Kurt_rows[:, isc] = kurtosis(incrs, axis=1,
+                                     fisher=False, bias=False)
 
-    # ---- Centre ----
-    center = len(scalesx)//2    
-    for m in moms:
-        S[m][center, center] = np.nan
-        S[m][center, center] = np.nanmean(
-            S[m][center-1:center+2, center-1:center+2]
-        )
+        # Columns
+        incrs = (signal[:, :-scale] - signal[:, scale:]).ravel()
+        np.random.shuffle(incrs)
+        usable = Nreal * (len(incrs) // Nreal)
+        incrs = incrs[:usable].reshape(Nreal, -1)
 
-    # ---- Passage en polaire ----
-    axis_t, axis_r, _ = polar_axis(S[moms[0]], n_theta=n_theta)
+        S2_cols[:, isc]  = np.var(incrs, axis=1)
+        Kurt_cols[:, isc] = kurtosis(incrs, axis=1,
+                                     fisher=False, bias=False)
 
-    S_polar = {m: field_2D_polar(S[m], n_theta=n_theta) for m in moms}
-    S_Om = {m: np.sum(S_polar[m], axis=0) for m in moms}
+    return scales, S2_rows, S2_cols, Kurt_rows, Kurt_cols
 
-    return axis_t, axis_r, S_polar, S_Om
+def plot_structure_functions(signal,
+                             small_scale,
+                             large_scale,
+                             nv=16,
+                             Nreal=100,
+                             L_norm=None,
+                             c1=None,
+                             c2=None,
+                             pdf_scales_indices=(0, 5, 10, 15)):
+    """
+    Compute structure functions and plot:
+    - S2
+    - Kurtosis
+    - PDFs of normalized increments for selected scales
+    """
 
-
-def plot_structure_function_polar(
-    H,
-    dx,
-    l,
-    L,
-    nv=16,
-    moms_to_plot=[2, 3],  # Par défaut, on trace S2 et S3
-    slopes={},            # Dictionnaire des pentes (ex: {2: 0.5, 3: 0.8})
-    title="Structure functions in polar coordinates",
-    ref_r=None           # Point de référence pour l'alignement vertical
-):
-    # Calcule uniquement les moments demandés
-    axis_t, axis_r, S_polar, S_Om = compute_structure_function_polar(H, dx, l, L, nv, moms=moms_to_plot)
-
-    plt.figure(figsize=(8, 5))
-
-    for m in moms_to_plot:
-        S_Om_temp = axis_r * S_Om[m]
-        plt.loglog(axis_r, axis_r * S_Om_temp, label=rf"omnidirectionnal $S_{m}$")
-
-        if m in slopes:
-            slope = slopes[m]
-            # Calcule la valeur de S_Om_temp au point de référence
-            ref_S_Om = np.interp(ref_r, axis_r, S_Om_temp)
-            # Calcule la valeur de la référence au point de référence
-            ref_ref = ref_r ** slope
-            # Facteur de normalisation
-            norm_factor = ref_S_Om / ref_ref
-            # Trace la courbe de référence normalisée
-            plt.loglog(
-                axis_r,
-                norm_factor * axis_r**slope,
-                "--",
-                label=rf"$r^{{{slope}}}$ (ref of $S_{m}$)"
-            )
-
-    plt.xlabel("Radius r")
-    plt.ylabel("Structure function")
-    plt.title(title)
-    plt.grid(True, which="both", ls="--")
-    plt.legend()
-    plt.show()
-
-
-    # flatness
-    plt.figure(figsize=(8, 5))
-    flatness = (axis_r * S_Om[4]) / ( (axis_r * S_Om[2])**2 )
-    slope = slopes[4] - 2*slopes[2]
-
-    plt.loglog(axis_r, flatness, label=rf"flatness")
-    # Calcule la valeur de S_Om_temp au point de référence
-    ref_flatness = np.interp(ref_r, axis_r, flatness)
-    # Calcule la valeur de la référence au point de référence
-    ref_ref = ref_r ** slope
-    # Facteur de normalisation
-    norm_factor = ref_flatness / ref_ref
-    # Trace la courbe de référence normalisée
-    plt.loglog(
-        axis_r,
-        norm_factor * axis_r**slope,
-        "--",
-        label=rf"$r^{{{slope}}}$ (ref for flatness)"
+    scales, S2_r, S2_c, K_r, K_c = _compute_structure_functions(
+        signal, small_scale, large_scale, nv, Nreal
     )
 
-    plt.xlabel("Radius r")
-    plt.ylabel("Flatness")
-    plt.title(title)
-    plt.grid(True, which="both", ls="--")
+    if L_norm is None:
+        L_norm = signal.shape[0]
+
+    x = np.log(scales / L_norm)
+
+    # =========================
+    # S2
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(np.log(S2_r), axis=0),
+                 np.std(np.log(S2_r), axis=0),
+                 color='b', label=r"S$^{\perp}_2$")
+
+    plt.errorbar(x,
+                 np.mean(np.log(S2_c), axis=0),
+                 np.std(np.log(S2_c), axis=0),
+                 color='r', linestyle=":", label=r"S$^{\parallel}_2$")
+
+    if c1 is not None:
+        plt.plot(x, 2 * c1 * x + 13.3, 'k--', label=r"$(\frac{l}{L})^{2c_1}$")
+    plt.xlabel(r"$\log(l/L)$")
+    plt.ylabel(r"$\log(S_2)$")
     plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # Flatness
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(np.log(K_r/3), axis=0),
+                 np.std(np.log(K_r/3), axis=0),
+                 color='b', label=r"$\frac{F^{\perp}(l)}{3}$")
+
+    plt.errorbar(x,
+                 np.mean(np.log(K_c/3), axis=0),
+                 np.std(np.log(K_c/3), axis=0),
+                 color='r', linestyle=":", label=r"$\frac{F^{\parallel}(l)}{3}$")
+
+    if c2 is not None:
+        plt.plot(x, -4 * c2 * x - 0.3, 'k--', label=r"$(\frac{l}{L})^{-4c_2}$")
+
+    plt.xlabel(r"$\log(l/L)$")
+    plt.ylabel(r"$\log(\frac{F}{3})$")
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # PDFs des incréments
+    # =========================
+    plt.figure()
+
+    vertical_spacing = 5  # decalage entre courbes
+    ncurves = len(pdf_scales_indices)
+
+    for i, idx in enumerate(pdf_scales_indices):
+        if idx >= len(scales):
+            continue
+
+        scale = scales[idx]
+
+        incr = (signal[:-scale, :] - signal[scale:, :]).ravel()
+        incr = (incr - np.mean(incr)) / np.std(incr)
+
+        nbins = 120
+        hist, bins = np.histogram(incr, bins=nbins, density=False)
+
+        centers = 0.5 * (bins[1:] + bins[:-1])
+        bin_width = bins[1] - bins[0]
+
+        pdf = hist / (np.sum(hist) * bin_width)
+
+        # enlever bins mal résolus
+        mask = hist > 10
+        centers = centers[mask]
+        pdf = pdf[mask]
+
+        # Décalage multiplicatif
+        shift_factor = vertical_spacing ** (ncurves - i - 1)
+        pdf_shifted = pdf * shift_factor
+
+        plt.scatter(centers, pdf_shifted,
+                    s=15,
+                    alpha=0.7,
+                    label=f"l={scale}")
+
+    plt.yscale("log")
+    plt.xlabel(r"$\delta u / \sigma$")
+    plt.ylabel("PDF (offset)")
+    plt.legend()
+    plt.tight_layout()
+
     plt.show()
+
+    return scales, S2_r, S2_c, K_r, K_c

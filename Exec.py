@@ -6,8 +6,7 @@ from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n, compute_structure_function_polar, \
-                    plot_structure_function_polar
+                 plot_spectrum_mean_std, zeta_n, plot_structure_functions
 
        
 cfg = Parameters()
@@ -102,17 +101,14 @@ plot_spectrum_mean_std(
 tcurrent = 0
 img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
 
-plot_structure_function_polar(
-    img_norm,
-    dx=dx,
-    l=dx,
-    L=L_LS,
+plot_structure_functions(
+    signal=img_norm,
+    small_scale=dx,
+    large_scale=L_LS,
     nv=16,
-    moms_to_plot=[2,4],  # Par défaut, on trace S2 et S3
-    slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},      
-    title="Structure functions in polar coordinates",
-    ref_r=1
+    Nreal=101,
+    L_norm=512,
+    c1=c1,
+    c2=c2,
+    pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
 )
-
-#slopes={2.0 : zeta_n(c1, c2, 2), 4 : zeta_n(c1, c2, 4.0)},           
-#slopes={2.0 : zeta_n(c1, c2, 2)},   
