@@ -106,11 +106,13 @@ plot_spectrum_mean_std(
     std_factor=1.0
 )
 
-tcurrent = 0
-img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2) 
-img_norm_t_evolve = np.sqrt(V_x**2 + V_y**2) 
+### GIF of time evolution
+img_norm_t_evolve = np.sqrt(V_x**2 + V_y**2 + V_z**2) 
 save_field_gif_matplotlib(img_norm_t_evolve, filename="normV.gif", fps=15)
 
+### Structure functions
+tcurrent = 0
+img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2 + V_z[tcurrent, :, :, 0]**2) 
 plot_structure_functions(
     signal=img_norm,
     small_scale=dx,
