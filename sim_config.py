@@ -47,6 +47,7 @@ class Parameters(SimulationConfig):
         self.PN = N//2                                 # aliased wavevector index
         self.dx = self.Lx / N
 
+        self.wavelet = self.method == 'Wavelet'
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
@@ -85,7 +86,6 @@ class Parameters(SimulationConfig):
         A = np.sqrt(S1)
         self.N = N
 
-        self.wavelet = self.method == 'Wavelet'
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = np.log2(N)
@@ -102,31 +102,6 @@ class Parameters(SimulationConfig):
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
             tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
-            # min_tau = min(tau_B.min(), tau_e.min())
-            # print(f"Smallest physical time: {min_tau}")
-            # print(f"Time step: dt = {self.Delta_t}")
-
-            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
-
-            # if min_tau <= self.Delta_t:
-            #     print("ACHTUNG: time step may be too large!")
-            exp_B = np.exp(-self.Delta_t / tau_B)
-            noise_B = np.sqrt(1 - exp_B**2)
-
-            exp_e = np.exp(-self.Delta_t / tau_e)
-            noise_e = np.sqrt(1 - exp_e**2)
-            
-            self.KX = KX
-            self.KY = KY
-            self.K = K
-            self.A = A
-
-            self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
-
-            self.exp_B = exp_B
-            self.noise_B = noise_B
-            self.exp_e = exp_e
-            self.noise_e = noise_e
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
@@ -135,24 +110,21 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
-            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
-
-            exp_B = np.exp(-self.Delta_t / tau_B)
-            noise_B = np.sqrt(1 - exp_B**2)
-
-            exp_e = np.exp(-self.Delta_t / tau_e)
-            noise_e = np.sqrt(1 - exp_e**2)
-
             np.seterr(divide = 'ignore') 
-            self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
             S2 = ( K / K_Lx ) ** (-1)
-            self.cleanAliasing(S2)
             np.seterr(divide = 'warn') 
+            self.cleanAliasing(S2)
+            self.S2 = S2
         
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
+        self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
         print("The time step is : dt = " + str(self.Delta_t))
+        exp_B = np.exp(-self.Delta_t / tau_B)
+        noise_B = np.sqrt(1 - exp_B**2)
+        exp_e = np.exp(-self.Delta_t / tau_e)
+        noise_e = np.sqrt(1 - exp_e**2)
 
         if self.dim == 3 :
             K = K[:,:,:,:,np.newaxis]
@@ -160,6 +132,7 @@ class Parameters(SimulationConfig):
             exp_B = exp_B[:,:,:,:,np.newaxis]
             noise_B = noise_B[:,:,:,:,np.newaxis]
 
+        self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
         self.N = N
         self.K = K
         self.A = A
@@ -167,7 +140,6 @@ class Parameters(SimulationConfig):
         self.noise_B = noise_B
         self.exp_e = exp_e
         self.noise_e = noise_e
-        self.S2 = S2
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :

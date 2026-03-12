@@ -142,7 +142,6 @@ def reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, cfg):
     return B, lepsi
 
 def intermittency(lepsi,cfg):
-    #lepsi = lepsi - lepsi.mean(dim=(-2, -1), keepdim=True)
     lepsi /= lepsi.std() 
     lepsi *= np.sqrt(cfg.c2_eff)
     lepsi -= lepsi.var() 
@@ -151,8 +150,6 @@ def intermittency(lepsi,cfg):
 def spectral_velocity(B, epsi, cfg):
     B = B.cpu().numpy()
     epsi = epsi.cpu().numpy()
-
-    K_LS = 2 * np.pi / cfg.L_LS
 
     Bepsi_hat = np.fft.fft2(B * epsi, axes=(-2, -1))
 
@@ -167,7 +164,7 @@ def spectral_velocity(B, epsi, cfg):
     vort = np.fft.ifft2(vort_hat, axes=(-2, -1)).real
 
     # normalize per ensemble
-    ampli = K_LS * np.sqrt((stream**2).mean(axis=(-2, -1), keepdims=True))
+    ampli = cfg.K_LS * np.sqrt((stream**2).mean(axis=(-2, -1), keepdims=True))
 
     stream /= ampli
     Vx /= ampli
