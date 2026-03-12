@@ -64,6 +64,11 @@ class Parameters(SimulationConfig):
             KY = KY[:,:,np.newaxis]
             K = np.sqrt(KX**2 + KY**2)
             Kv = np.concat((KX, KY), axis= 2)
+            if self.wavelet:
+                KX = KX[:,:,0]
+                KY = KY[:,:,0]
+                K = K[:,:,0]
+                Kv = Kv[:,:,0]
             self.KX = KX
             self.KY = KY
         elif self.dim == 3 :
@@ -73,10 +78,17 @@ class Parameters(SimulationConfig):
             KZ = KZ[:,:,:,np.newaxis]
             K = np.sqrt(KX**2 + KY**2 + KZ**2)
             Kv = np.concat((KX, KY, KZ), axis= 3)
+            Kv = Kv[:,:,:,:,np.newaxis]
+            if self.wavelet:
+                KX = KX[:,:,:,0]
+                KY = KY[:,:,:,0]
+                KZ = KZ[:,:,:,0]
+                K = K[:,:,:,0]
+                Kv = Kv[:,:,:,0]
             self.KX = KX
             self.KY = KY
             self.KZ = KZ
-            self.Kv = Kv[:,:,:,:,np.newaxis]
+            self.Kv = Kv
         else:
             raise ValueError("Incorrect dim")
 
@@ -126,7 +138,7 @@ class Parameters(SimulationConfig):
         exp_e = np.exp(-self.Delta_t / tau_e)
         noise_e = np.sqrt(1 - exp_e**2)
 
-        if self.dim == 3 :
+        if self.dim == 3 and not self.wavelet:
             K = K[:,:,:,:,np.newaxis]
             A = A[:,:,:,:,np.newaxis]
             exp_B = exp_B[:,:,:,:,np.newaxis]
