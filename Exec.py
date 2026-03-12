@@ -28,12 +28,12 @@ else:
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
 ###################################################################################
 
-if dim == 3:
-   stream_z = stream_z[:,:,:,:,0]
-   V_x = V_x[:,:,:,:,0]
-   V_y = V_y[:,:,:,:,0]
-   V_z = V_z[:,:,:,:,0]
-   vort_z = vort_z[:,:,:,:,0]
+if dim == 3: # take a slice a z = 0
+   stream_z = stream_z[:,:,:,0,:]
+   V_x = V_x[:,:,:,0,:]
+   V_y = V_y[:,:,:,0,:]
+   V_z = V_z[:,:,:,0,:]
+   vort_z = vort_z[:,:,:,0,:]
 
 ### 2D + 3D instant plots :
 #plot_surface(stream_z[0,:,:,0], title="stream_z at t=0")
