@@ -6,6 +6,7 @@ def run_simulation_W(cfg):
     # ---- init shapes ----
     V_x = cfg.zeroField()
     V_y = cfg.zeroField()
+    V_z = cfg.zeroField()
     stream = cfg.zeroField()
     vort = cfg.zeroField()
     epsi = cfg.zeroField()
@@ -16,10 +17,11 @@ def run_simulation_W(cfg):
     B_A, B_D = wavelet_noise(cfg)  
     lepsi_A, lepsi_D = wavelet_colored_noise(cfg)
 
-    Vx, Vy, s, w, e = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
+    Vx, Vy, Vz, s, w, e = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
 
     V_x[0] = np.moveaxis(Vx, 0, -1)
     V_y[0] = np.moveaxis(Vy, 0, -1)
+    V_z[0] = np.moveaxis(Vz, 0, -1)
     stream[0] = np.moveaxis(s, 0, -1)
     vort[0] = np.moveaxis(w, 0, -1)
     epsi[0] = np.moveaxis(e, 0, -1)
@@ -38,17 +40,18 @@ def run_simulation_W(cfg):
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
 
         # ---- Reconstruction & velocity ----
-        Vx, Vy, s, w, e = CMG_velocity_W(
+        Vx, Vy, Vz, s, w, e = CMG_velocity_W(
             B_A, B_D, lepsi_A, lepsi_D, cfg
         )
 
         V_x[t+1] = np.moveaxis(Vx, 0, -1)
         V_y[t+1] = np.moveaxis(Vy, 0, -1)
+        V_z[t+1] = np.moveaxis(Vz, 0, -1)
         stream[t+1] = np.moveaxis(s, 0, -1)
         vort[t+1] = np.moveaxis(w, 0, -1)
         epsi[t+1] = np.moveaxis(e, 0, -1)
 
-    return V_x, V_y, stream, vort, epsi
+    return V_x, V_y, V_z, stream, vort, epsi
 
 def wavelet_noise(cfg):  
     # Bruit ensembliste
@@ -171,7 +174,10 @@ def spectral_velocity(B, epsi, cfg):
     Vy /= ampli
     vort /= ampli
 
-    return Vx, Vy, stream, vort, epsi
+    # Vz = cfg.zeroSpatialField()
+    Vz = np.zeros_like(Vx)
+
+    return Vx, Vy, Vz, stream, vort, epsi
 
 def CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg):
     B, lepsi = reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, cfg)

@@ -21,7 +21,7 @@ dx = cfg.dx
 if not cfg.wavelet:
     V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
 else:
-    V_x, V_y, stream_z, vort_z, epsi = run_simulation_W(cfg)
+    V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation_W(cfg)
 
 
 ###################################### Plots ######################################
