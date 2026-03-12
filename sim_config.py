@@ -41,7 +41,7 @@ class Parameters(SimulationConfig):
                              + "Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
         else:
             print(f"Using consistent parameters: " \
-                  + "c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
+                  + f"dim = {self.dim}, c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
         self.PN = N//2                                 # aliased wavevector index
