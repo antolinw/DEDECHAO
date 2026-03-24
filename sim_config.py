@@ -90,6 +90,7 @@ class Parameters(SimulationConfig):
             # print(f"Time step: dt = {self.Delta_t}")
 
             self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+            self.Big_t = max(tau_B.max(), tau_e.max()) * 0.5
 
             # if min_tau <= self.Delta_t:
             #     print("ACHTUNG: time step may be too large!")
@@ -119,6 +120,7 @@ class Parameters(SimulationConfig):
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
             self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+            self.Big_t = max(tau_B.max(), tau_e.max()) * 0.5
 
             exp_B = np.exp(-self.Delta_t / tau_B)
             noise_B = np.sqrt(1 - exp_B**2)

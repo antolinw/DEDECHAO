@@ -6,7 +6,8 @@ from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n, plot_structure_functions
+                 plot_spectrum_mean_std, zeta_n, plot_structure_functions, \
+                    plot_structure_functions_3D
 
        
 cfg = Parameters()
@@ -17,6 +18,8 @@ dim = cfg.dim
 gamma = cfg.gamma_t
 L_LS = cfg.L_LS
 dx = cfg.dx
+dt = cfg.Delta_t
+T = cfg.Big_t
 
 if not cfg.wavelet:
     V_x, V_y, stream, vort, epsi = run_simulation(cfg)
@@ -113,4 +116,16 @@ plot_structure_functions(
     c1=c1,
     c2=c2,
     pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
+)
+scales, S2, K = plot_structure_functions_3D(
+    signal=img_norm_t_evolve,
+    small_scale=dt,
+    large_scale=T,
+    nv=16,
+    Nreal=100,
+    L_norm=200,
+    c1=c1,
+    c2=c2,
+    Nsamples_per_real=5000,
+    pdf_scales_indices=(0, 5, 10, 15, 30, 45, 100)
 )
