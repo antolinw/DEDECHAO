@@ -155,6 +155,7 @@ def spectral_velocity(B, epsi, cfg):
     K_LS = 2 * np.pi / cfg.L_LS
 
     Bepsi_hat = np.fft.fft2(B * epsi, axes=(-2, -1))
+    cfg.cleanAliasing_W(Bepsi_hat)
 
     stream_hat = cfg.A * Bepsi_hat
     v_hat_x = 1j * cfg.KY * stream_hat

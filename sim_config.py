@@ -151,6 +151,11 @@ class Parameters(SimulationConfig):
         S1[0, 0] = 0
         S1[self.PN, :] = 0
         S1[:, self.PN] = 0
+
+    def cleanAliasing_W(self,S1):
+        S1[0, 0, 0] = 0
+        S1[0, self.PN, :] = 0
+        S1[0, :, self.PN] = 0
         
     def zeroField(self):
         zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
