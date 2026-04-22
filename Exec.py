@@ -27,6 +27,8 @@ else:
     V_x, V_y, stream, vort, epsi = run_simulation_W(cfg)
 
 
+print("Simulation completed. Now plotting results...")
+
 ###################################### Plots ######################################
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
 ###################################################################################
@@ -51,32 +53,12 @@ krOU, psdOU = plot_isotropic_psd(
    slope=-rho
 )
 
-## Structure functions computation :
-#S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
+# krOU, psdOU = plot_isotropic_psd(
+#    V_x[900,:,:,0],
+#    label="Bi-OU_t900",
+#    slope=-rho
+# )
 
-## Plot of structure functions as images :
-#plot_img(S2x[0,:,:],title="S2")
-
-## Plot of radial S2 :
-#r, radial_means = plot_radial_profile(
-#   S2x[0, :, :],
-#   slope= zeta_n(c1, c2, 2),
-#   title="S2 Radial Intensity"
-#)
-
-## Plot of radial S3 :
-#r, radial_means = plot_radial_profile(
-#   S3x[0, :, :],
-#   slope= zeta_n(c1, c2, 3),
-#   title="S3 Radial Intensity"
-#)
-
-## Plot of radial S3 :
-#r, radial_means = plot_radial_profile(
-#   Fx[0, :, :],
-#   slope= zeta_n(c1, c2, 4) - 2*zeta_n(c1, c2, 2),
-#   title="Flatness"
-#)
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
 #save_field_gif_matplotlib(vort[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
