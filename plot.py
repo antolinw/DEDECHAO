@@ -579,3 +579,163 @@ def plot_increment_pdfs(signal,
     plt.tight_layout()
 
     plt.show()
+
+    def _compute_structure_functions_3D_ultra(signal,
+                                          small_scale,
+                                          large_scale,
+                                          nv,
+                                          Nreal,
+                                          Nsamples_per_real=5000,
+                                          pdf_scales_indices=None):
+
+    signal = signal.astype(np.float32, copy=False)
+
+    Nt, Nx, Ny, Nm = signal.shape
+
+    # --- scales log ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
+
+    r_pix = np.unique((r_phys / small_scale).astype(int))
+    r_pix = r_pix[(r_pix > 0) & (r_pix < Nt // 2)]
+    scales = r_pix
+
+    S2 = np.zeros((Nreal, len(scales)), dtype=np.float32)
+    Kurt = np.zeros((Nreal, len(scales)), dtype=np.float32)
+
+    pdf_data = {}
+
+    usable = Nreal * Nsamples_per_real
+
+    for isc, scale in enumerate(scales):
+
+        # ===== sampling rapide =====
+        t = np.random.randint(0, Nt - scale, size=usable)
+        x = np.random.randint(0, Nx, size=usable)
+        y = np.random.randint(0, Ny, size=usable)
+
+        incrs = signal[t, x, y, 0] - signal[t + scale, x, y, 0]
+        incrs = incrs.reshape(Nreal, Nsamples_per_real)
+
+        # ===== stats =====
+        S2[:, isc] = np.var(incrs, axis=1)
+
+        Kurt[:, isc] = kurtosis(incrs, axis=1,
+                               fisher=False, bias=False)
+
+        # ===== stockage PDF =====
+        if pdf_scales_indices is not None and isc in pdf_scales_indices:
+            pdf_data[isc] = incrs.copy()
+
+    return scales, S2, Kurt, pdf_data
+
+def plot_structure_functions_3D(signal,
+                                small_scale,
+                                large_scale,
+                                nv=16,
+                                Nreal=100,
+                                Nsamples_per_real=5000,
+                                L_norm=None,
+                                c1=None,
+                                c2=None,
+                                pdf_scales_indices=(0, 5, 10, 15),
+                                xlim_pdf=(-5, 5)):
+
+    scales, S2, K, pdf_data = _compute_structure_functions_3D_ultra(
+        signal,
+        small_scale,
+        large_scale,
+        nv,
+        Nreal,
+        Nsamples_per_real,
+        pdf_scales_indices
+    )
+
+    if L_norm is None:
+        L_norm = signal.shape[0]
+
+    x = scales * small_scale
+
+    # =========================
+    # S2
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(S2, axis=0),
+                 np.std(S2, axis=0),
+                 color='b', label=r"S$^{t}_2$")
+
+    if c1 is not None:
+        plt.plot(x, 2 * c1 * x + 10.5, 'k--')
+
+    plt.xlabel(r"l/L")
+    plt.ylabel(r"$S_2$")
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # Flatness
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean((K / 3), axis=0),
+                 np.std((K / 3), axis=0),
+                 color='b', label=r"$\frac{F^t}{3}$")
+
+    if c2 is not None:
+        plt.plot(x, -4 * c2 * x - 0.1, 'k--')
+
+    plt.xlabel(r"l/L")
+    plt.ylabel(r"F/3")
+    #plt.ylim(0,1)
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # PDFs
+    # =========================
+    if pdf_data:
+
+        plt.figure()
+
+        vertical_spacing = 5
+        ncurves = len(pdf_data)
+
+        for i, (isc, incrs) in enumerate(sorted(pdf_data.items())):
+
+            incr = incrs.ravel()
+
+            # normalisation
+            incr = (incr - np.mean(incr)) / np.std(incr)
+
+            hist, bins = np.histogram(incr, bins=120, density=False)
+
+            centers = 0.5 * (bins[1:] + bins[:-1])
+            bin_width = bins[1] - bins[0]
+
+            pdf = hist / (np.sum(hist) * bin_width)
+
+            mask = hist > 10
+            centers = centers[mask]
+            pdf = pdf[mask]
+
+            shift = vertical_spacing ** (ncurves - i - 1)
+
+            plt.scatter(centers,
+                        pdf * shift,
+                        s=15,
+                        alpha=0.7,
+                        label=f"$\\tau={scales[isc]}$")
+
+        plt.yscale("log")
+        plt.xlim(xlim_pdf)
+
+        plt.xlabel(r"$\delta u / \sigma$")
+        plt.ylabel("PDF (offset)")
+        plt.legend()
+        plt.tight_layout()
+
+    plt.show()
+
+    return x, S2, K
