@@ -4,6 +4,7 @@ import matplotlib.animation as animation
 from scipy.stats import kurtosis, skew, norm
 import cv2
 
+
 def zeta_n(c1, c2, n):
     return c1*n - c2*n*(n-2)/2
 
@@ -403,114 +404,108 @@ def plot_structure_functions(signal,
                              large_scale,
                              nv=16,
                              Nreal=100,
-                             L_norm=None,
+                             # --- S2 options ---
+                             normalize=False,
+                             scale_factor_R=1.0,
+                             scale_factor_C=1.0,
+                             # --- theory ---
+                             plot_theory=False,
+                             dim=2,
+                             nu=None,
+                             ell=None,
+                             L=None,
+                             dx=None,
+                             # --- slopes ---
+                             plot_slope=False,
                              c1=None,
-                             c2=None,
-                             pdf_scales_indices=(0, 5, 10, 15)):
-    """
-    Compute structure functions and plot:
-    - S2
-    - Kurtosis
-    - PDFs of normalized increments for selected scales
-    """
-
+                             # --- kurtosis ---
+                             plot_kurtosis=False,
+                             c2=None):
+    
     scales, S2_r, S2_c, K_r, K_c = _compute_structure_functions(
         signal, small_scale, large_scale, nv, Nreal
     )
 
-    if L_norm is None:
-        L_norm = signal.shape[0]
+    x = scales * small_scale
 
-    x = np.log(scales / L_norm)
+    R_m = np.mean(S2_r, axis=0)
+    C_m = np.mean(S2_c, axis=0)
 
     # =========================
-    # S2
+    # S2 PLOT
     # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean(np.log(S2_r), axis=0),
-                 np.std(np.log(S2_r), axis=0),
-                 color='b', label=r"S$^{\perp}_2$")
+    if normalize:
+        R_m = R_m / np.max(R_m)
+        C_m = C_m / np.max(C_m)
 
-    plt.errorbar(x,
-                 np.mean(np.log(S2_c), axis=0),
-                 np.std(np.log(S2_c), axis=0),
-                 color='r', linestyle=":", label=r"S$^{\parallel}_2$")
+    plt.figure(figsize=(10, 6))
+    plt.loglog(x, scale_factor_R * R_m, label='R_s')
+    plt.loglog(x, scale_factor_C * C_m, label='C_s')
 
-    if c1 is not None:
-        plt.plot(x, 2 * c1 * x + 13.3, 'k--', label=r"$(\frac{l}{L})^{2c_1}$")
-    plt.xlabel(r"$\log(l/L)$")
-    plt.ylabel(r"$\log(S_2)$")
+    # --- slope S2 ---
+    if plot_slope:
+        if c1 is None:
+            raise ValueError("c1 required for S2 slope")
+
+        K_ref = np.logspace(np.log10(x.min()), np.log10(x.max()), 100)
+        S_ref = K_ref ** (2 * c1)
+        S_ref *= R_m[-1] / S_ref[-1]
+
+        plt.loglog(K_ref, S_ref, 'g--', label=f"Slope = {2*c1:.2f}")
+
+    # --- theory ---
+    if plot_theory:
+        from sklearn.gaussian_process.kernels import Matern
+
+        kernel = Matern(length_scale=ell, nu=nu)
+
+        r_th = np.linspace(dx, L/2, 200)
+        X = r_th.reshape(-1, 1)
+
+        C_r = kernel(X, [[0]]).ravel()
+        C0 = kernel([[0]], [[0]])[0, 0]
+
+        S2_th = (C0 - C_r)
+        S2_th /= C0
+
+        plt.loglog(r_th, S2_th, 'r--', label="Theory (Matérn)")
+
+    plt.xlabel("r")
+    plt.ylabel("S2(r)")
     plt.legend()
+    plt.grid(True, which="both", ls="--")
     plt.tight_layout()
-
-    # =========================
-    # Flatness
-    # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean(np.log(K_r/3), axis=0),
-                 np.std(np.log(K_r/3), axis=0),
-                 color='b', label=r"$\frac{F^{\perp}(l)}{3}$")
-
-    plt.errorbar(x,
-                 np.mean(np.log(K_c/3), axis=0),
-                 np.std(np.log(K_c/3), axis=0),
-                 color='r', linestyle=":", label=r"$\frac{F^{\parallel}(l)}{3}$")
-
-    if c2 is not None:
-        plt.plot(x, -4 * c2 * x - 0.3, 'k--', label=r"$(\frac{l}{L})^{-4c_2}$")
-
-    plt.xlabel(r"$\log(l/L)$")
-    plt.ylabel(r"$\log(\frac{F}{3})$")
-    plt.legend()
-    plt.tight_layout()
-
-    # =========================
-    # PDFs des incréments
-    # =========================
-    plt.figure()
-
-    vertical_spacing = 5  # decalage entre courbes
-    ncurves = len(pdf_scales_indices)
-
-    for i, idx in enumerate(pdf_scales_indices):
-        if idx >= len(scales):
-            continue
-
-        scale = scales[idx]
-
-        incr = (signal[:-scale, :] - signal[scale:, :]).ravel()
-        incr = (incr - np.mean(incr)) / np.std(incr)
-
-        nbins = 120
-        hist, bins = np.histogram(incr, bins=nbins, density=False)
-
-        centers = 0.5 * (bins[1:] + bins[:-1])
-        bin_width = bins[1] - bins[0]
-
-        pdf = hist / (np.sum(hist) * bin_width)
-
-        # enlever bins mal résolus
-        mask = hist > 10
-        centers = centers[mask]
-        pdf = pdf[mask]
-
-        # Décalage multiplicatif
-        shift_factor = vertical_spacing ** (ncurves - i - 1)
-        pdf_shifted = pdf * shift_factor
-
-        plt.scatter(centers, pdf_shifted,
-                    s=15,
-                    alpha=0.7,
-                    label=f"l={scale}")
-
-    plt.yscale("log")
-    plt.xlabel(r"$\delta u / \sigma$")
-    plt.ylabel("PDF (offset)")
-    plt.legend()
-    plt.tight_layout()
-
     plt.show()
 
-    return scales, S2_r, S2_c, K_r, K_c
+    # =========================
+    # KURTOSIS PLOT
+    # =========================
+    if plot_kurtosis:
+        K_r_m = np.mean(K_r, axis=0) / 3
+        K_c_m = np.mean(K_c, axis=0) / 3
+
+        plt.figure(figsize=(10, 6))
+
+        plt.loglog(x, K_r_m, label=r"$F_r / 3$")
+        plt.loglog(x, K_c_m, label=r"$F_c / 3$")
+
+        # --- slope kurtosis ---
+        if c2 is not None:
+            K_ref = np.logspace(np.log10(x.min()), np.log10(x.max()), 100)
+            F_ref = K_ref ** (-4 * c2)
+
+            # normalize visually
+            F_ref *= K_r_m[-1] / F_ref[-1]
+
+            plt.loglog(K_ref, F_ref, 'k--', label=f"Slope = {-4*c2:.2f}")
+
+        plt.xlabel("r")
+        plt.ylabel("Flatness / 3")
+        #plt.ylim(1,10)
+        plt.legend()
+        plt.grid(True, which="both", ls="--")
+        plt.tight_layout()
+        plt.show()
+
+    return scales, x, S2_r, S2_c, K_r, K_c
+
