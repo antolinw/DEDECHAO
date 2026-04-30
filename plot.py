@@ -509,3 +509,73 @@ def plot_structure_functions(signal,
 
     return scales, x, S2_r, S2_c, K_r, K_c
 
+def plot_increment_pdfs(signal,
+                        small_scale,
+                        large_scale,
+                        nv=16,
+                        pdf_scales_indices=(0, 5, 10, 15),
+                        xlim_pdf=(-5, 5),
+                        nbins=120,
+                        vertical_spacing=5,
+                        min_count=10,
+                        normalize=True):
+    
+    N = signal.shape[0]
+
+    # --- Log scales ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
+
+    r_pix = np.unique((r_phys / small_scale).astype(int))
+    r_pix = r_pix[(r_pix > 0) & (r_pix < N//2)]
+    scales = r_pix #* small_scale
+
+
+    # =========================
+    # PDFs des incréments
+    # =========================
+    plt.figure()
+
+    vertical_spacing = 5  # decalage entre courbes
+    ncurves = len(pdf_scales_indices)
+
+    for i, idx in enumerate(pdf_scales_indices):
+        if idx >= len(scales):
+            continue
+
+        scale = scales[idx] 
+
+        incr = (signal[:-scale, :] - signal[scale:, :]).ravel()
+        incr = (incr - np.mean(incr)) / np.std(incr)
+
+        nbins = 120
+        hist, bins = np.histogram(incr, bins=nbins, density=False)
+
+        centers = 0.5 * (bins[1:] + bins[:-1])
+        bin_width = bins[1] - bins[0]
+
+        pdf = hist / (np.sum(hist) * bin_width)
+
+        # enlever bins mal résolus
+        mask = hist > 10
+        centers = centers[mask]
+        pdf = pdf[mask]
+
+        # Décalage multiplicatif
+        shift_factor = vertical_spacing ** (ncurves - i - 1)
+        pdf_shifted = pdf * shift_factor
+
+        plt.scatter(centers, pdf_shifted,
+                    s=15,
+                    alpha=0.7,
+                    label=f"l={scale}")
+
+    plt.yscale("log")
+    plt.xlim(-10, 10)
+    plt.xlabel(r"$\delta u / \sigma$")
+    plt.ylabel("PDF (offset)")
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show()
