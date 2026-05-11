@@ -45,13 +45,14 @@ class Parameters(SimulationConfig):
                              + "Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
         else:
             print(f"Using consistent parameters: " \
-                  + "c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
+                  + f"dim = {self.dim}, c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
         self.PN = N//2                                 # aliased wavevector index
         self.dx = self.Lx / N
 
-        z = (self.rho_s - 1) / (self.gamma_t + 1)      # scaling slope for time scale
+        self.wavelet = self.method == 'Wavelet'
+        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
         #theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
         theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum  
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
@@ -62,9 +63,39 @@ class Parameters(SimulationConfig):
 
         # Wavenumbers
         kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
-        ky = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
-        KX, KY = np.meshgrid(kx, ky, indexing="ij")
-        K = np.sqrt(KX**2 + KY**2)
+        if self.dim == 2 :
+            KX, KY = np.meshgrid(kx, kx, indexing="ij")
+            KX = KX[:,:,np.newaxis]
+            KY = KY[:,:,np.newaxis]
+            K = np.sqrt(KX**2 + KY**2)
+            Kv = np.concat((KX, KY), axis= 2)
+            if self.wavelet:
+                KX = KX[:,:,0]
+                KY = KY[:,:,0]
+                K = K[:,:,0]
+                Kv = Kv[:,:,0]
+            self.KX = KX
+            self.KY = KY
+        elif self.dim == 3 :
+            KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+            KX = KX[:,:,:,np.newaxis]
+            KY = KY[:,:,:,np.newaxis]
+            KZ = KZ[:,:,:,np.newaxis]
+            K = np.sqrt(KX**2 + KY**2 + KZ**2)
+            Kv = np.concat((KX, KY, KZ), axis= 3)
+            Kv = Kv[:,:,:,:,np.newaxis]
+            if self.wavelet:
+                KX = KX[:,:,:,0]
+                KY = KY[:,:,:,0]
+                KZ = KZ[:,:,:,0]
+                K = K[:,:,:,0]
+                Kv = Kv[:,:,:,0]
+            self.KX = KX
+            self.KY = KY
+            self.KZ = KZ
+            self.Kv = Kv
+        else:
+            raise ValueError("Incorrect dim")
 
         # Spectrum
         S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
@@ -72,11 +103,9 @@ class Parameters(SimulationConfig):
         A = np.sqrt(S1)
         self.N = N
 
-        self.wavelet = self.method == 'Wavelet'
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = np.log2(N)
-            self.dx = self.Lx / (2 ** self.n_order)
             self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
             self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
             if self.J > self.Jmax:
@@ -90,33 +119,6 @@ class Parameters(SimulationConfig):
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
             tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
-            # min_tau = min(tau_B.min(), tau_e.min())
-            # print(f"Smallest physical time: {min_tau}")
-            # print(f"Time step: dt = {self.Delta_t}")
-
-            self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
-            tau_B_filtered = tau_B[~np.isinf(tau_B)]
-            self.Big_t = np.max(tau_B_filtered) * 0.5
-
-            # if min_tau <= self.Delta_t:
-            #     print("ACHTUNG: time step may be too large!")
-            exp_B = np.exp(-self.Delta_t / tau_B)
-            noise_B = np.sqrt(1 - exp_B**2)
-
-            exp_e = np.exp(-self.Delta_t / tau_e)
-            noise_e = np.sqrt(1 - exp_e**2)
-            
-            self.KX = KX
-            self.KY = KY
-            self.K = K
-            self.A = A
-
-            self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
-
-            self.exp_B = exp_B
-            self.noise_B = noise_B
-            self.exp_e = exp_e
-            self.noise_e = noise_e
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
@@ -125,58 +127,84 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
-            #self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
-            self.Delta_t = tau_B.min() * 0.5
-            print('my two small times are: ', tau_B.min() * 0.5, tau_e.min() * 0.5)
-
-            tau_B_filtered = tau_B[~np.isinf(tau_B)]
-            self.Big_t = np.max(tau_B_filtered) * 0.5
-
-            exp_B = np.exp(-self.Delta_t / tau_B)
-            noise_B = np.sqrt(1 - exp_B**2)
-
-            exp_e = np.exp(-self.Delta_t / tau_e)
-            noise_e = np.sqrt(1 - exp_e**2)
-
             np.seterr(divide = 'ignore') 
-            self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
             S2 = ( K / K_Lx ) ** (-1)
-            self.cleanAliasing(S2)
             np.seterr(divide = 'warn') 
-
-            self.dx = self.Lx / (2 ** self.n_order)
-            self.KX = KX[:,:,np.newaxis]
-            self.KY = KY[:,:,np.newaxis]
-            self.K = K[:,:,np.newaxis]
-            self.A = A[:,:,np.newaxis]
-            self.exp_B = exp_B[:,:,np.newaxis]
-            self.noise_B = noise_B[:,:,np.newaxis]
-            self.exp_e = exp_e[:,:,np.newaxis]
-            self.noise_e = noise_e[:,:,np.newaxis]
-            self.S2 = S2[:,:,np.newaxis]
+            self.cleanAliasing(S2)
+            self.S2 = S2
+        
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
+        self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+        tau_B_filtered = tau_B[~np.isinf(tau_B)]
+        self.Big_t = np.max(tau_B_filtered) * 0.5
+        print('my two small times are: ', tau_B.min() * 0.5, tau_e.min() * 0.5)
         print("The time step is : dt = " + str(self.Delta_t))
 
+        exp_B = np.exp(-self.Delta_t / tau_B)
+        noise_B = np.sqrt(1 - exp_B**2)
+        exp_e = np.exp(-self.Delta_t / tau_e)
+        noise_e = np.sqrt(1 - exp_e**2)
+
+        if self.dim == 3 and not self.wavelet:
+            K = K[:,:,:,:,np.newaxis]
+            A = A[:,:,:,:,np.newaxis]
+            exp_B = exp_B[:,:,:,:,np.newaxis]
+            noise_B = noise_B[:,:,:,:,np.newaxis]
+
+        self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
+        self.N = N
+        self.K = K
+        self.A = A
+        self.exp_B = exp_B
+        self.noise_B = noise_B
+        self.exp_e = exp_e
+        self.noise_e = noise_e
+    
     def cleanAliasing(self,S1):
-        S1[0, 0] = 0
-        S1[self.PN, :] = 0
-        S1[:, self.PN] = 0
+        if self.dim == 2 :
+            S1[0, 0] = 0
+            S1[self.PN, :] = 0
+            S1[:, self.PN] = 0
+        elif self.dim == 3 :
+            S1[0, 0, 0] = 0
+            S1[self.PN, :, :] = 0
+            S1[:, self.PN, :] = 0
+            S1[:, :, self.PN] = 0
+        else:
+            raise ValueError("Incorrect dim")
 
     def cleanAliasing_W(self,S1):
         S1[0, 0, 0] = 0
         S1[0, self.PN, :] = 0
         S1[0, :, self.PN] = 0
-        
+
     def zeroField(self):
-        zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+        if self.dim == 2 :
+            zeroF = np.zeros((self.N_steps, self.N, self.N, self.n_ens))
+        elif self.dim == 3 :
+            zeroF = np.zeros((self.N_steps, self.N, self.N, self.N, self.n_ens))
+        else:
+            raise ValueError("Incorrect dim")
         return zeroF
 
     def zeroSpatialField(self):
-        zeroF = np.zeros((self.N, self.N, self.n_ens))
+        if self.dim == 2 :
+            zeroF = np.zeros((self.N, self.N, self.n_ens))
+        elif self.dim == 3 :
+            zeroF = np.zeros((self.N, self.N, self.N, self.n_ens))
+        else:
+            raise ValueError("Incorrect dim")
         return zeroF
     
-    def whiteNoise(self):
-        xi = np.random.randn(self.N, self.N, self.n_ens)
+    def whiteNoise(self, scalar = False):
+        if self.dim == 2 :
+            xi = np.random.randn(self.N, self.N, self.n_ens)
+        elif self.dim == 3 :
+            xi = np.random.randn(self.N, self.N, self.N, 3*(not scalar) + scalar, self.n_ens)
+            if scalar:
+                xi = xi[:,:,:,0,:]
+        else:
+            raise ValueError("Incorrect dim")
         return xi
