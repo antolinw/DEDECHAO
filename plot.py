@@ -189,6 +189,103 @@ def save_field_gif_matplotlib(field,
 
     print(f"GIF saved as {filename}")
 
+def save_spiky_field_gif_matplotlib(
+        field,
+        filename="epsi_field.gif",
+        fps=10,
+        vmin=None,
+        vmax=None,
+        cmap="inferno",
+        lower_percentile=1,
+        upper_percentile=99.7,
+        add_colorbar=True):
+
+    """
+    Save a GIF from a time-evolving intermittent positive field.
+
+    Parameters
+    ----------
+    field : np.ndarray
+        Array of shape (t, x, y)
+
+    filename : str
+        Output GIF filename
+
+    fps : int
+        Frames per second
+
+    vmin, vmax : float or None
+        Color scale limits.
+        If None, computed from percentiles.
+
+    cmap : str
+        Matplotlib colormap
+
+    lower_percentile : float
+        Percentile used for vmin if vmin is None
+
+    upper_percentile : float
+        Percentile used for vmax if vmax is None
+
+    add_colorbar : bool
+        Add colorbar to figure
+    """
+
+    nt = field.shape[0]
+
+    # Compute robust global limits
+    if vmin is None:
+        vmin = np.percentile(field, lower_percentile)
+
+    if vmax is None:
+        vmax = np.percentile(field, upper_percentile)
+
+    print(f"Using vmin={vmin:.4e}, vmax={vmax:.4e}")
+
+    # Create figure
+    fig, ax = plt.subplots()
+
+    im = ax.imshow(
+        field[0],
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        animated=True
+    )
+
+    ax.axis("off")
+
+    # Optional colorbar
+    if add_colorbar:
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label("Intermittency [m^2/s^3]",labelpad=15)
+
+    # Animation update
+    def update(frame):
+
+        im.set_array(field[frame])
+
+        return (im,)
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=nt,
+        interval=1000 / fps,
+        blit=True
+    )
+
+    # Save animation
+    ani.save(
+        filename,
+        writer="pillow",
+        fps=fps
+    )
+
+    plt.close(fig)
+
+    print(f"GIF saved as {filename}")
+
 def compute_spectrum(signal, dt, axis=0):
     """
     Compute temporal power spectrum of a signal.

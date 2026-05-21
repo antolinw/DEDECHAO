@@ -7,7 +7,7 @@ from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
                  plot_spectrum_mean_std, zeta_n, plot_structure_functions, plot_increment_pdfs, \
-                 plot_structure_functions_3D
+                 plot_structure_functions_3D, save_spiky_field_gif_matplotlib
 
        
 cfg = Parameters()
@@ -73,7 +73,13 @@ krOU, psdOU = plot_isotropic_psd(
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
 #save_field_gif_matplotlib(vort_z[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
-#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_c2-0p05_S2corrected.gif", fps=15)
+save_spiky_field_gif_matplotlib(
+    epsi[:,:,:,0],
+    filename="Epsi_c2-0p05_S2corrected.gif",
+    lower_percentile=1.0,
+    upper_percentile=99.5
+)
 
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
 signal = V_x[:, :, :, 0]
