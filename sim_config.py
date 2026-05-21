@@ -128,7 +128,7 @@ class Parameters(SimulationConfig):
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
             np.seterr(divide = 'ignore') 
-            S2 = ( K / K_Lx ) ** (-1)
+            S2 = ( K / K_Lx ) ** (-self.dim) # cf eq (34) of Ruffenach et al. (2026)
             np.seterr(divide = 'warn') 
             self.cleanAliasing(S2)
             self.S2 = S2
