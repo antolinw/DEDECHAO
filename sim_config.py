@@ -15,6 +15,7 @@ class SimulationConfig:
     J: int = 9                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
+    new_spTimeGMC = False          # Wandrille's method for spatiotemporal GMC
 
     # --------- Physical ---------
     Lx: float = 2                  # domain size
