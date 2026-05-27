@@ -47,6 +47,12 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
         B_real = np.fft.ifft(B_real, axis=2).real
     # B_real = (B_real - B_real.mean()) / B_real.std() # needed ???
 
+    Bepsi_hat,epsi = CMG_from_noise(B_real,lepsi_hat,cfg)
+
+    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
+
+def CMG_from_noise(B_real,lepsi_hat,cfg, intermittency = True):
+
     lepsi_real = np.fft.ifft2(lepsi_hat, axes=(0,1)).real
     if cfg.dim == 3:
         lepsi_real = np.fft.ifft(lepsi_real, axis=2).real
@@ -61,6 +67,10 @@ def CMG_velocity(B_hat,lepsi_hat,cfg):
     if cfg.dim == 3:
         Bepsi_hat = np.fft.fft(Bepsi_hat, axis=2) 
     cfg.cleanAliasing(Bepsi_hat)
+
+    return Bepsi_hat,epsi
+
+def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
 
     # ---- Velocity ----
     stream_hat = cfg.A * Bepsi_hat
