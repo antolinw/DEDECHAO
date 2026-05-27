@@ -10,8 +10,8 @@ def run_simulation(cfg):
     vort_z = cfg.zeroField()
     epsi = cfg.zeroField()
 
-    B_hat = fftnoise(cfg)
     lepsi_hat =  np.sqrt(cfg.S2) * fftnoise(cfg, scalar = True)
+    B_hat = fftnoise(cfg)
     V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
         = CMG_velocity(B_hat,lepsi_hat,cfg)
 
