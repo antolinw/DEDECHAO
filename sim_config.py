@@ -32,6 +32,10 @@ class SimulationConfig:
     # tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
+    # --------- Matérn parameters ---------
+    nu_m: float = c1
+    l_m: float = (np.sqrt(2 * nu_m) * L_LS) / (2 * np.pi)
+
 class Parameters(SimulationConfig): 
     def __init__(self):
         super().__init__()
@@ -50,7 +54,8 @@ class Parameters(SimulationConfig):
 
         self.wavelet = self.method == 'Wavelet'
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
-        theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
+        #theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
+        theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum  
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
         self.K_LS = K_LS
@@ -124,7 +129,7 @@ class Parameters(SimulationConfig):
             tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
             np.seterr(divide = 'ignore') 
-            S2 = ( K / K_Lx ) ** (-1)
+            S2 = ( K / K_Lx ) ** (-self.dim) # cf eq (34) of Ruffenach et al. (2026)
             np.seterr(divide = 'warn') 
             self.cleanAliasing(S2)
             self.S2 = S2
@@ -133,7 +138,11 @@ class Parameters(SimulationConfig):
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
         self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+        tau_B_filtered = tau_B[~np.isinf(tau_B)]
+        self.Big_t = np.max(tau_B_filtered) * 0.5
+        print('my two small times are: ', tau_B.min() * 0.5, tau_e.min() * 0.5)
         print("The time step is : dt = " + str(self.Delta_t))
+
         exp_B = np.exp(-self.Delta_t / tau_B)
         noise_B = np.sqrt(1 - exp_B**2)
         exp_e = np.exp(-self.Delta_t / tau_e)
@@ -166,6 +175,11 @@ class Parameters(SimulationConfig):
             S1[:, :, self.PN] = 0
         else:
             raise ValueError("Incorrect dim")
+
+    def cleanAliasing_W(self,S1):
+        S1[0, 0, 0] = 0
+        S1[0, self.PN, :] = 0
+        S1[0, :, self.PN] = 0
 
     def zeroField(self):
         if self.dim == 2 :

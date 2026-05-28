@@ -6,7 +6,8 @@ from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
-                 plot_spectrum_mean_std, zeta_n, plot_structure_functions
+                 plot_spectrum_mean_std, zeta_n, plot_structure_functions, plot_increment_pdfs, \
+                 plot_structure_functions_3D, save_spiky_field_gif_matplotlib
 
        
 cfg = Parameters()
@@ -15,14 +16,21 @@ c2 = cfg.c2
 rho = cfg.rho_s
 dim = cfg.dim
 gamma = cfg.gamma_t
+L = cfg.Lx
 L_LS = cfg.L_LS
+nu = cfg.nu_m
+ell = (L_LS * np.sqrt(2 * nu)) / (2 * np.pi)
 dx = cfg.dx
+dt = cfg.Delta_t
+T = cfg.Big_t
 
 if not cfg.wavelet:
     V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
 else:
     V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation_W(cfg)
 
+
+print("Simulation completed. Now plotting results...")
 
 ###################################### Plots ######################################
 ##### The outputs are 4D arrays with dimensions (time, x, y, ensemble member) #####
@@ -52,40 +60,26 @@ plot_surface(vort_z[0,:,:,0], title="vort_z at t=0 and z=0")
 ## Spectra (Spatial) :
 krOU, psdOU = plot_isotropic_psd(
    V_x[0,:,:,0],
-   label="Bi-OU",
+   label="Bi-OU_t0",
    slope=-rho
 )
 
-## Structure functions computation :
-#S2x, Fx, S3x = compute_correlations_notime(V_x[0, :, :,0])
+# krOU, psdOU = plot_isotropic_psd(
+#    V_x[900,:,:,0],
+#    label="Bi-OU_t900",
+#    slope=-rho
+# )
 
-## Plot of structure functions as images :
-#plot_img(S2x[0,:,:],title="S2")
-
-## Plot of radial S2 :
-#r, radial_means = plot_radial_profile(
-#   S2x[0, :, :],
-#   slope= zeta_n(c1, c2, 2),
-#   title="S2 Radial Intensity"
-#)
-
-## Plot of radial S3 :
-#r, radial_means = plot_radial_profile(
-#   S3x[0, :, :],
-#   slope= zeta_n(c1, c2, 3),
-#   title="S3 Radial Intensity"
-#)
-
-## Plot of radial S3 :
-#r, radial_means = plot_radial_profile(
-#   Fx[0, :, :],
-#   slope= zeta_n(c1, c2, 4) - 2*zeta_n(c1, c2, 2),
-#   title="Flatness"
-#)
 
 # Animation of vorticity over time (I took the first member of the ensemble here) :
 #save_field_gif_matplotlib(vort_z[:,:,:,0], filename="Vort_r-6_c2-1_zeps-1.gif", fps=15)
-#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_r-6_c2-1_zeps-1.gif", fps=15)
+#save_field_gif_matplotlib(epsi[:,:,:,0], filename="Epsi_c2-0p05_S2corrected.gif", fps=15)
+save_spiky_field_gif_matplotlib(
+    epsi[:,:,:,0],
+    filename="Epsi_c2-0p05_S2corrected.gif",
+    lower_percentile=1.0,
+    upper_percentile=99.5
+)
 
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
 signal = V_x[:, :, :, 0]
@@ -108,19 +102,65 @@ plot_spectrum_mean_std(
 
 ### GIF of time evolution
 img_norm_t_evolve = np.sqrt(V_x**2 + V_y**2 + V_z**2) 
-save_field_gif_matplotlib(img_norm_t_evolve, filename="normV.gif", fps=15)
+save_field_gif_matplotlib(img_norm_t_evolve, filename="normV.gif", fps=6)
 
 ### Structure functions
 tcurrent = 0
 img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2 + V_z[tcurrent, :, :, 0]**2) 
-plot_structure_functions(
-    signal=img_norm,
-    small_scale=dx,
-    large_scale=L_LS,
+# S_s, x_s, SR_s, SC_s, KR_s, Kc_s = plot_structure_functions(V_x[tcurrent, :, :, 0],
+#                             small_scale=dx,
+#                             large_scale=L_LS,
+#                             nv=2**6,
+#                             Nreal=101,
+#                             # --- options affichage ---
+#                             normalize=False,
+#                             scale_factor_R=0.25,
+#                             scale_factor_C=0.17,
+#                             # --- options théorie Matérn ---
+#                             plot_theory=True,
+#                             dim=2,
+#                             nu=c1,
+#                             ell=ell,
+#                             L=L,
+#                             dx=dx,
+#                             # --- pente de référence ---
+#                             plot_slope=True,
+#                             c1=c1,
+#                             # --- kurtosis ---
+#                             plot_kurtosis=True,
+#                             c2=c2)
+
+# plot_increment_pdfs(V_x[tcurrent, :, :, 0],
+#                         small_scale=dx,
+#                         large_scale=L_LS,
+#                         nv=2**6,
+#                         pdf_scales_indices=(0, 5, 10, 15),
+#                         xlim_pdf=(-5, 5),
+#                         nbins=120,
+#                         vertical_spacing=5,
+#                         min_count=10,
+#                         normalize=True)
+
+s_t, S2_t, K_T = plot_structure_functions_3D(
+    signal=V_x,
+    small_scale=dt,
+    large_scale=T,
     nv=16,
-    Nreal=101,
-    L_norm=512,
+    Nreal= 20,
     c1=c1,
-    c2=c2,
+    c2=0,
     pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
 )
+
+# scales, S2, K = plot_structure_functions_3D(
+#     signal=img_norm_t_evolve,
+#     small_scale=dt,
+#     large_scale=T,
+#     nv=16,
+#     Nreal=100,
+#     L_norm=200,
+#     c1=c1,
+#     c2=c2,
+#     Nsamples_per_real=5000,
+#     pdf_scales_indices=(0, 5, 10, 15, 30, 45, 100)
+# )

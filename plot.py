@@ -4,6 +4,7 @@ import matplotlib.animation as animation
 from scipy.stats import kurtosis, skew, norm
 import cv2
 
+
 def zeta_n(c1, c2, n):
     return c1*n - c2*n*(n-2)/2
 
@@ -184,6 +185,103 @@ def save_field_gif_matplotlib(field,
 
     # Save GIF
     ani.save(filename, writer="pillow", fps=fps)
+    plt.close(fig)
+
+    print(f"GIF saved as {filename}")
+
+def save_spiky_field_gif_matplotlib(
+        field,
+        filename="epsi_field.gif",
+        fps=10,
+        vmin=None,
+        vmax=None,
+        cmap="inferno",
+        lower_percentile=1,
+        upper_percentile=99.7,
+        add_colorbar=True):
+
+    """
+    Save a GIF from a time-evolving intermittent positive field.
+
+    Parameters
+    ----------
+    field : np.ndarray
+        Array of shape (t, x, y)
+
+    filename : str
+        Output GIF filename
+
+    fps : int
+        Frames per second
+
+    vmin, vmax : float or None
+        Color scale limits.
+        If None, computed from percentiles.
+
+    cmap : str
+        Matplotlib colormap
+
+    lower_percentile : float
+        Percentile used for vmin if vmin is None
+
+    upper_percentile : float
+        Percentile used for vmax if vmax is None
+
+    add_colorbar : bool
+        Add colorbar to figure
+    """
+
+    nt = field.shape[0]
+
+    # Compute robust global limits
+    if vmin is None:
+        vmin = np.percentile(field, lower_percentile)
+
+    if vmax is None:
+        vmax = np.percentile(field, upper_percentile)
+
+    print(f"Using vmin={vmin:.4e}, vmax={vmax:.4e}")
+
+    # Create figure
+    fig, ax = plt.subplots()
+
+    im = ax.imshow(
+        field[0],
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        animated=True
+    )
+
+    ax.axis("off")
+
+    # Optional colorbar
+    if add_colorbar:
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label("Intermittency [m^2/s^3]",labelpad=15)
+
+    # Animation update
+    def update(frame):
+
+        im.set_array(field[frame])
+
+        return (im,)
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=nt,
+        interval=1000 / fps,
+        blit=True
+    )
+
+    # Save animation
+    ani.save(
+        filename,
+        writer="pillow",
+        fps=fps
+    )
+
     plt.close(fig)
 
     print(f"GIF saved as {filename}")
@@ -403,68 +501,133 @@ def plot_structure_functions(signal,
                              large_scale,
                              nv=16,
                              Nreal=100,
-                             L_norm=None,
+                             # --- S2 options ---
+                             normalize=False,
+                             scale_factor_R=1.0,
+                             scale_factor_C=1.0,
+                             # --- theory ---
+                             plot_theory=False,
+                             dim=2,
+                             nu=None,
+                             ell=None,
+                             L=None,
+                             dx=None,
+                             # --- slopes ---
+                             plot_slope=False,
                              c1=None,
-                             c2=None,
-                             pdf_scales_indices=(0, 5, 10, 15)):
-    """
-    Compute structure functions and plot:
-    - S2
-    - Kurtosis
-    - PDFs of normalized increments for selected scales
-    """
-
+                             # --- kurtosis ---
+                             plot_kurtosis=False,
+                             c2=None):
+    
     scales, S2_r, S2_c, K_r, K_c = _compute_structure_functions(
         signal, small_scale, large_scale, nv, Nreal
     )
 
-    if L_norm is None:
-        L_norm = signal.shape[0]
+    x = scales * small_scale
 
-    x = np.log(scales / L_norm)
+    R_m = np.mean(S2_r, axis=0)
+    C_m = np.mean(S2_c, axis=0)
 
     # =========================
-    # S2
+    # S2 PLOT
     # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean(np.log(S2_r), axis=0),
-                 np.std(np.log(S2_r), axis=0),
-                 color='b', label=r"S$^{\perp}_2$")
+    if normalize:
+        R_m = R_m / np.max(R_m)
+        C_m = C_m / np.max(C_m)
 
-    plt.errorbar(x,
-                 np.mean(np.log(S2_c), axis=0),
-                 np.std(np.log(S2_c), axis=0),
-                 color='r', linestyle=":", label=r"S$^{\parallel}_2$")
+    plt.figure(figsize=(10, 6))
+    plt.loglog(x, scale_factor_R * R_m, label='R_s')
+    plt.loglog(x, scale_factor_C * C_m, label='C_s')
 
-    if c1 is not None:
-        plt.plot(x, 2 * c1 * x + 13.3, 'k--', label=r"$(\frac{l}{L})^{2c_1}$")
-    plt.xlabel(r"$\log(l/L)$")
-    plt.ylabel(r"$\log(S_2)$")
+    # --- slope S2 ---
+    if plot_slope:
+        if c1 is None:
+            raise ValueError("c1 required for S2 slope")
+
+        K_ref = np.logspace(np.log10(x.min()), np.log10(x.max()), 100)
+        S_ref = K_ref ** (2 * c1)
+        S_ref *= R_m[-1] / S_ref[-1]
+
+        plt.loglog(K_ref, S_ref, 'g--', label=f"Slope = {2*c1:.2f}")
+
+    # --- theory ---
+    if plot_theory:
+        from sklearn.gaussian_process.kernels import Matern
+
+        kernel = Matern(length_scale=ell, nu=nu)
+
+        r_th = np.linspace(dx, L/2, 200)
+        X = r_th.reshape(-1, 1)
+
+        C_r = kernel(X, [[0]]).ravel()
+        C0 = kernel([[0]], [[0]])[0, 0]
+
+        S2_th = (C0 - C_r)
+        S2_th /= C0
+
+        plt.loglog(r_th, S2_th, 'r--', label="Theory (Matérn)")
+
+    plt.xlabel("r")
+    plt.ylabel("S2(r)")
     plt.legend()
+    plt.grid(True, which="both", ls="--")
     plt.tight_layout()
+    plt.show()
 
     # =========================
-    # Flatness
+    # KURTOSIS PLOT
     # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean(np.log(K_r/3), axis=0),
-                 np.std(np.log(K_r/3), axis=0),
-                 color='b', label=r"$\frac{F^{\perp}(l)}{3}$")
+    if plot_kurtosis:
+        K_r_m = np.mean(K_r, axis=0) / 3
+        K_c_m = np.mean(K_c, axis=0) / 3
 
-    plt.errorbar(x,
-                 np.mean(np.log(K_c/3), axis=0),
-                 np.std(np.log(K_c/3), axis=0),
-                 color='r', linestyle=":", label=r"$\frac{F^{\parallel}(l)}{3}$")
+        plt.figure(figsize=(10, 6))
 
-    if c2 is not None:
-        plt.plot(x, -4 * c2 * x - 0.3, 'k--', label=r"$(\frac{l}{L})^{-4c_2}$")
+        plt.loglog(x, K_r_m, label=r"$F_r / 3$")
+        plt.loglog(x, K_c_m, label=r"$F_c / 3$")
 
-    plt.xlabel(r"$\log(l/L)$")
-    plt.ylabel(r"$\log(\frac{F}{3})$")
-    plt.legend()
-    plt.tight_layout()
+        # --- slope kurtosis ---
+        if c2 is not None:
+            K_ref = np.logspace(np.log10(x.min()), np.log10(x.max()), 100)
+            F_ref = K_ref ** (-4 * c2)
+
+            # normalize visually
+            F_ref *= K_r_m[-1] / F_ref[-1]
+
+            plt.loglog(K_ref, F_ref, 'k--', label=f"Slope = {-4*c2:.2f}")
+
+        plt.xlabel("r")
+        plt.ylabel("Flatness / 3")
+        #plt.ylim(1,10)
+        plt.legend()
+        plt.grid(True, which="both", ls="--")
+        plt.tight_layout()
+        plt.show()
+
+    return scales, x, S2_r, S2_c, K_r, K_c
+
+def plot_increment_pdfs(signal,
+                        small_scale,
+                        large_scale,
+                        nv=16,
+                        pdf_scales_indices=(0, 5, 10, 15),
+                        xlim_pdf=(-5, 5),
+                        nbins=120,
+                        vertical_spacing=5,
+                        min_count=10,
+                        normalize=True):
+    
+    N = signal.shape[0]
+
+    # --- Log scales ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
+
+    r_pix = np.unique((r_phys / small_scale).astype(int))
+    r_pix = r_pix[(r_pix > 0) & (r_pix < N//2)]
+    scales = r_pix #* small_scale
+
 
     # =========================
     # PDFs des incréments
@@ -478,7 +641,7 @@ def plot_structure_functions(signal,
         if idx >= len(scales):
             continue
 
-        scale = scales[idx]
+        scale = scales[idx] 
 
         incr = (signal[:-scale, :] - signal[scale:, :]).ravel()
         incr = (incr - np.mean(incr)) / np.std(incr)
@@ -506,6 +669,7 @@ def plot_structure_functions(signal,
                     label=f"l={scale}")
 
     plt.yscale("log")
+    plt.xlim(-10, 10)
     plt.xlabel(r"$\delta u / \sigma$")
     plt.ylabel("PDF (offset)")
     plt.legend()
@@ -513,4 +677,162 @@ def plot_structure_functions(signal,
 
     plt.show()
 
-    return scales, S2_r, S2_c, K_r, K_c
+    def _compute_structure_functions_3D_ultra(signal,
+                                          small_scale,
+                                          large_scale,
+                                          nv,
+                                          Nreal,
+                                          Nsamples_per_real=5000,
+                                          pdf_scales_indices=None):
+
+    signal = signal.astype(np.float32, copy=False)
+
+    Nt, Nx, Ny, Nm = signal.shape
+
+    # --- scales log ---
+    r_phys = 2**np.arange(np.log2(small_scale),
+                          np.log2(large_scale),
+                          1/nv)
+
+    r_pix = np.unique((r_phys / small_scale).astype(int))
+    r_pix = r_pix[(r_pix > 0) & (r_pix < Nt // 2)]
+    scales = r_pix
+
+    S2 = np.zeros((Nreal, len(scales)), dtype=np.float32)
+    Kurt = np.zeros((Nreal, len(scales)), dtype=np.float32)
+
+    pdf_data = {}
+
+    usable = Nreal * Nsamples_per_real
+
+    for isc, scale in enumerate(scales):
+
+        # ===== sampling rapide =====
+        t = np.random.randint(0, Nt - scale, size=usable)
+        x = np.random.randint(0, Nx, size=usable)
+        y = np.random.randint(0, Ny, size=usable)
+
+        incrs = signal[t, x, y, 0] - signal[t + scale, x, y, 0]
+        incrs = incrs.reshape(Nreal, Nsamples_per_real)
+
+        # ===== stats =====
+        S2[:, isc] = np.var(incrs, axis=1)
+
+        Kurt[:, isc] = kurtosis(incrs, axis=1,
+                               fisher=False, bias=False)
+
+        # ===== stockage PDF =====
+        if pdf_scales_indices is not None and isc in pdf_scales_indices:
+            pdf_data[isc] = incrs.copy()
+
+    return scales, S2, Kurt, pdf_data
+
+def plot_structure_functions_3D(signal,
+                                small_scale,
+                                large_scale,
+                                nv=16,
+                                Nreal=100,
+                                Nsamples_per_real=5000,
+                                L_norm=None,
+                                c1=None,
+                                c2=None,
+                                pdf_scales_indices=(0, 5, 10, 15),
+                                xlim_pdf=(-5, 5)):
+
+    scales, S2, K, pdf_data = _compute_structure_functions_3D_ultra(
+        signal,
+        small_scale,
+        large_scale,
+        nv,
+        Nreal,
+        Nsamples_per_real,
+        pdf_scales_indices
+    )
+
+    if L_norm is None:
+        L_norm = signal.shape[0]
+
+    x = scales * small_scale
+
+    # =========================
+    # S2
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean(S2, axis=0),
+                 np.std(S2, axis=0),
+                 color='b', label=r"S$^{t}_2$")
+
+    if c1 is not None:
+        plt.plot(x, 2 * c1 * x + 10.5, 'k--')
+
+    plt.xlabel(r"l/L")
+    plt.ylabel(r"$S_2$")
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # Flatness
+    # =========================
+    plt.figure()
+    plt.errorbar(x,
+                 np.mean((K / 3), axis=0),
+                 np.std((K / 3), axis=0),
+                 color='b', label=r"$\frac{F^t}{3}$")
+
+    if c2 is not None:
+        plt.plot(x, -4 * c2 * x - 0.1, 'k--')
+
+    plt.xlabel(r"l/L")
+    plt.ylabel(r"F/3")
+    #plt.ylim(0,1)
+    plt.legend()
+    plt.tight_layout()
+
+    # =========================
+    # PDFs
+    # =========================
+    if pdf_data:
+
+        plt.figure()
+
+        vertical_spacing = 5
+        ncurves = len(pdf_data)
+
+        for i, (isc, incrs) in enumerate(sorted(pdf_data.items())):
+
+            incr = incrs.ravel()
+
+            # normalisation
+            incr = (incr - np.mean(incr)) / np.std(incr)
+
+            hist, bins = np.histogram(incr, bins=120, density=False)
+
+            centers = 0.5 * (bins[1:] + bins[:-1])
+            bin_width = bins[1] - bins[0]
+
+            pdf = hist / (np.sum(hist) * bin_width)
+
+            mask = hist > 10
+            centers = centers[mask]
+            pdf = pdf[mask]
+
+            shift = vertical_spacing ** (ncurves - i - 1)
+
+            plt.scatter(centers,
+                        pdf * shift,
+                        s=15,
+                        alpha=0.7,
+                        label=f"$\\tau={scales[isc]}$")
+
+        plt.yscale("log")
+        plt.xlim(xlim_pdf)
+
+        plt.xlabel(r"$\delta u / \sigma$")
+        plt.ylabel("PDF (offset)")
+        plt.legend()
+        plt.tight_layout()
+
+    plt.show()
+
+    return x, S2, K
