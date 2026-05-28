@@ -117,10 +117,10 @@ def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
     # Set amplitude
     ampli = cfg.K_LS * np.sqrt((stream_z[:]**2).mean())
     stream_z /= ampli
-    V_x /= ampli
-    V_y /= ampli
-    V_z /= ampli
-    vort_z /= ampli
+    # V_x /= ampli
+    # V_y /= ampli
+    # V_z /= ampli
+    # vort_z /= ampli
 
     return V_x, V_y, V_z, stream_z, vort_z, epsi
 
