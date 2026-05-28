@@ -78,7 +78,7 @@ def CMG_from_noise(B_real,lepsi_hat,cfg, intermittency = True):
     Bepsi_hat = np.fft.fft2(B_real * epsi, axes=(0,1))
     if cfg.dim == 3:
         Bepsi_hat = np.fft.fft(Bepsi_hat, axis=2) 
-    cfg.cleanAliasing(Bepsi_hat)
+    cfg.cleanAliasing(Bepsi_hat + 2)
 
     return Bepsi_hat,epsi
 
