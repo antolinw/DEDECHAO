@@ -96,7 +96,7 @@ def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
     stream = np.fft.ifft2(stream_hat, axes=(0,1)).real
     vort = np.fft.ifft2(vort_hat, axes=(0,1)).real
     if cfg.dim == 2:
-        V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
+        # V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
         V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
         V_z = cfg.zeroSpatialField()
         stream_z = stream
