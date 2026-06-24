@@ -7,7 +7,7 @@ from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_img, plot_surface, plot_isotropic_psd, \
                  save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
                  plot_spectrum_mean_std, zeta_n, plot_structure_functions, plot_increment_pdfs, \
-                 plot_structure_functions_3D, save_spiky_field_gif_matplotlib
+                 plot_structure_functions_temporal, save_spiky_field_gif_matplotlib
 
        
 cfg = Parameters()
@@ -141,26 +141,13 @@ img_norm = np.sqrt(V_x[tcurrent, :, :, 0]**2 + V_y[tcurrent, :, :, 0]**2 + V_z[t
 #                         min_count=10,
 #                         normalize=True)
 
-s_t, S2_t, K_T = plot_structure_functions_3D(
-    signal=V_x,
-    small_scale=dt,
-    large_scale=T,
-    nv=16,
-    Nreal= 20,
-    c1=c1,
-    c2=0,
-    pdf_scales_indices=(0, 1, 2, 4, 8, 10, 15, 30)
+#Tested with N=2**8 et Nt=3000
+x, S2, K = plot_structure_functions_temporal(
+    V_x[:,:,:,0],
+    small_scale=1,      # Minimum time lag
+    large_scale=np.size(V_x[:,0,0,0])//4,  # Large scale in numbers of step, can be larger than L integral
+    dt=dt,              # pas de temps en secondes
+    tau_gauss=T,        # échelle intégrale ou de gaussianisation
+    c2=0.025,
+    pdf_scales_indices=(0, 5, 10, 35, 60)
 )
-
-# scales, S2, K = plot_structure_functions_3D(
-#     signal=img_norm_t_evolve,
-#     small_scale=dt,
-#     large_scale=T,
-#     nv=16,
-#     Nreal=100,
-#     L_norm=200,
-#     c1=c1,
-#     c2=c2,
-#     Nsamples_per_real=5000,
-#     pdf_scales_indices=(0, 5, 10, 15, 30, 45, 100)
-# )

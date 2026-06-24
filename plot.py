@@ -192,6 +192,7 @@ def save_field_gif_matplotlib(field,
 def save_spiky_field_gif_matplotlib(
         field,
         filename="epsi_field.gif",
+        label_field = "Intermittency [m^2/s^3]",
         fps=10,
         vmin=None,
         vmax=None,
@@ -258,7 +259,7 @@ def save_spiky_field_gif_matplotlib(
     # Optional colorbar
     if add_colorbar:
         cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label("Intermittency [m^2/s^3]",labelpad=15)
+        cbar.set_label(label_field,labelpad=15)
 
     # Animation update
     def update(frame):
@@ -677,162 +678,133 @@ def plot_increment_pdfs(signal,
 
     plt.show()
 
-    def _compute_structure_functions_3D_ultra(signal,
-                                          small_scale,
-                                          large_scale,
-                                          nv,
-                                          Nreal,
-                                          Nsamples_per_real=5000,
-                                          pdf_scales_indices=None):
+def _compute_structure_functions_temporal(signal, small_scale, large_scale, nv, Nreal):
+    """
+    signal : ndarray, shape (Nt, Nx, Ny)
+    Retourne scales (en pas de temps), S2, Kurt — shape (Nreal, n_scales)
+    """
+    Nt = signal.shape[0]
+    large_scale = min(large_scale, Nt // 2)
 
-    signal = signal.astype(np.float32, copy=False)
+    tau_pix = np.unique(np.round(
+        2 ** np.arange(np.log2(max(small_scale, 1)), np.log2(large_scale), 1 / nv)
+    ).astype(int))
+    scales = tau_pix[(tau_pix > 0) & (tau_pix < Nt // 2)]
 
-    Nt, Nx, Ny, Nm = signal.shape
+    if len(scales) == 0:
+        raise ValueError(f"Aucune échelle valide (Nt={Nt}, small={small_scale}, large={large_scale})")
 
-    # --- scales log ---
-    r_phys = 2**np.arange(np.log2(small_scale),
-                          np.log2(large_scale),
-                          1/nv)
+    # Pré-calcul des incréments (vectorized)
+    # On limite à la plus grande échelle pour éviter de recalculer
+    S2   = np.zeros((Nreal, len(scales)))
+    Kurt = np.zeros((Nreal, len(scales)))
 
-    r_pix = np.unique((r_phys / small_scale).astype(int))
-    r_pix = r_pix[(r_pix > 0) & (r_pix < Nt // 2)]
-    scales = r_pix
+    Nx, Ny = signal.shape[1], signal.shape[2]
+    sig_flat = signal.reshape(Nt, -1)          # (Nt, Nx*Ny)
 
-    S2 = np.zeros((Nreal, len(scales)), dtype=np.float32)
-    Kurt = np.zeros((Nreal, len(scales)), dtype=np.float32)
+    for isc, tau in enumerate(scales):
+        incrs = (sig_flat[tau:] - sig_flat[:-tau]).ravel()
+        rng   = np.random.default_rng()
+        rng.shuffle(incrs)
+        usable        = Nreal * (len(incrs) // Nreal)
+        incrs         = incrs[:usable].reshape(Nreal, -1)
+        S2[:, isc]   = np.var(incrs, axis=1)
+        Kurt[:, isc] = kurtosis(incrs, axis=1, fisher=False, bias=False)
 
-    pdf_data = {}
+    return scales, S2, Kurt
 
-    usable = Nreal * Nsamples_per_real
 
-    for isc, scale in enumerate(scales):
+def plot_structure_functions_temporal(signal,
+                                      small_scale,
+                                      large_scale,
+                                      dt=1.0,
+                                      nv=16,
+                                      Nreal=10,
+                                      c1=None,
+                                      c2=None,
+                                      tau_gauss=None,
+                                      pdf_scales_indices=(0, 5, 10, 15)):
+    """
+    Parameters
+    ----------
+    signal            : (Nt, Nx, Ny)
+    small_scale       : int   — lag minimal en pas de temps
+    large_scale       : int   — lag maximal en pas de temps
+    dt                : float — pas de temps physique (ex: 1/fe en secondes)
+    c1, c2            : float — pentes théoriques optionnelles
+    tau_gauss         : float — grande échelle de gaussianisation (unité physique)
+                                pour normaliser les légendes des PDFs
+    pdf_scales_indices: tuple — indices dans `scales` à afficher
+    """
+    if signal.ndim == 2:
+        signal = signal[:, np.newaxis, np.newaxis]
 
-        # ===== sampling rapide =====
-        t = np.random.randint(0, Nt - scale, size=usable)
-        x = np.random.randint(0, Nx, size=usable)
-        y = np.random.randint(0, Ny, size=usable)
-
-        incrs = signal[t, x, y, 0] - signal[t + scale, x, y, 0]
-        incrs = incrs.reshape(Nreal, Nsamples_per_real)
-
-        # ===== stats =====
-        S2[:, isc] = np.var(incrs, axis=1)
-
-        Kurt[:, isc] = kurtosis(incrs, axis=1,
-                               fisher=False, bias=False)
-
-        # ===== stockage PDF =====
-        if pdf_scales_indices is not None and isc in pdf_scales_indices:
-            pdf_data[isc] = incrs.copy()
-
-    return scales, S2, Kurt, pdf_data
-
-def plot_structure_functions_3D(signal,
-                                small_scale,
-                                large_scale,
-                                nv=16,
-                                Nreal=100,
-                                Nsamples_per_real=5000,
-                                L_norm=None,
-                                c1=None,
-                                c2=None,
-                                pdf_scales_indices=(0, 5, 10, 15),
-                                xlim_pdf=(-5, 5)):
-
-    scales, S2, K, pdf_data = _compute_structure_functions_3D_ultra(
-        signal,
-        small_scale,
-        large_scale,
-        nv,
-        Nreal,
-        Nsamples_per_real,
-        pdf_scales_indices
+    scales, S2, K = _compute_structure_functions_temporal(
+        signal, small_scale, large_scale, nv, Nreal
     )
 
-    if L_norm is None:
-        L_norm = signal.shape[0]
+    tau = scales * dt                          # axe temporel physique (pas en increments)
 
-    x = scales * small_scale
+    S2_mean, S2_std = np.mean(S2, axis=0), np.std(S2, axis=0)
+    K_mean,  K_std  = np.mean(K,  axis=0), np.std(K,  axis=0)
 
-    # =========================
-    # S2
-    # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean(S2, axis=0),
-                 np.std(S2, axis=0),
-                 color='b', label=r"S$^{t}_2$")
-
+    # ── S2  (log-log) ────────────────────────────────────────────────────────
+    fig, ax = plt.subplots()
+    ax.errorbar(tau, S2_mean, S2_std, color='b', label=r"$S_2(\tau)$")
     if c1 is not None:
-        plt.plot(x, 2 * c1 * x + 10.5, 'k--')
+        offset = S2_mean[0] / tau[0] ** (2 * c1)
+        ax.plot(tau, offset * tau ** (2 * c1), 'k--', label=rf"$\tau^{{{2*c1:.2g}}}$")
+    ax.set(xscale="log", yscale="log",
+           xlabel=r"$\tau$", ylabel=r"$S_2(\tau)$")
+    ax.legend()
+    fig.tight_layout()
 
-    plt.xlabel(r"l/L")
-    plt.ylabel(r"$S_2$")
-    plt.legend()
-    plt.tight_layout()
-
-    # =========================
-    # Flatness
-    # =========================
-    plt.figure()
-    plt.errorbar(x,
-                 np.mean((K / 3), axis=0),
-                 np.std((K / 3), axis=0),
-                 color='b', label=r"$\frac{F^t}{3}$")
-
+    # ── Flatness  (log-log) ──────────────────────────────────────────────────
+    fig, ax = plt.subplots()
+    ax.errorbar(tau, K_mean / 3, K_std / 3, color='b', label=r"$F(\tau)/3$")
     if c2 is not None:
-        plt.plot(x, -4 * c2 * x - 0.1, 'k--')
+        offset = (K_mean[0] / 3) / tau[0] ** (-4 * c2)
+        ax.plot(tau, offset * tau ** (-4 * c2), 'k--', label=rf"$\tau^{{{-4*c2:.2g}}}$")
+    ax.set(xscale="log", yscale="log",
+           xlabel=r"$\tau$", ylabel=r"$F(\tau)/3$")
+    ax.legend()
+    fig.tight_layout()
 
-    plt.xlabel(r"l/L")
-    plt.ylabel(r"F/3")
-    #plt.ylim(0,1)
-    plt.legend()
-    plt.tight_layout()
+    # ── PDFs ─────────────────────────────────────────────────────────────────
+    fig, ax = plt.subplots()
+    vertical_spacing = 5
+    ncurves = len(pdf_scales_indices)
+    colors  = plt.cm.viridis(np.linspace(0, 1, ncurves))
 
-    # =========================
-    # PDFs
-    # =========================
-    if pdf_data:
+    for i, idx in enumerate(pdf_scales_indices):
+        if idx >= len(scales):
+            continue
 
-        plt.figure()
+        tau_i   = scales[idx]
+        tau_phys = tau_i * dt
+        incr    = (signal[tau_i:] - signal[:-tau_i]).ravel()
+        incr    = (incr - np.mean(incr)) / np.std(incr)
 
-        vertical_spacing = 5
-        ncurves = len(pdf_data)
+        hist, bins = np.histogram(incr, bins=120, density=False)
+        centers    = 0.5 * (bins[1:] + bins[:-1])
+        pdf        = hist / (np.sum(hist) * (bins[1] - bins[0]))
 
-        for i, (isc, incrs) in enumerate(sorted(pdf_data.items())):
+        mask = hist > 10
+        shift = vertical_spacing ** (ncurves - i - 1)
 
-            incr = incrs.ravel()
+        # Légende : \tau / \tau_gauss si fourni, sinon valeur physique
+        if tau_gauss is not None:
+            lbl = rf"$\tau/\tau_G = {tau_phys/tau_gauss:.2g}$"
+        else:
+            lbl = rf"$\tau = {tau_phys:.3g}$"
 
-            # normalisation
-            incr = (incr - np.mean(incr)) / np.std(incr)
+        ax.scatter(centers[mask], pdf[mask] * shift,
+                   s=15, alpha=0.7, color=colors[i], label=lbl)
 
-            hist, bins = np.histogram(incr, bins=120, density=False)
-
-            centers = 0.5 * (bins[1:] + bins[:-1])
-            bin_width = bins[1] - bins[0]
-
-            pdf = hist / (np.sum(hist) * bin_width)
-
-            mask = hist > 10
-            centers = centers[mask]
-            pdf = pdf[mask]
-
-            shift = vertical_spacing ** (ncurves - i - 1)
-
-            plt.scatter(centers,
-                        pdf * shift,
-                        s=15,
-                        alpha=0.7,
-                        label=f"$\\tau={scales[isc]}$")
-
-        plt.yscale("log")
-        plt.xlim(xlim_pdf)
-
-        plt.xlabel(r"$\delta u / \sigma$")
-        plt.ylabel("PDF (offset)")
-        plt.legend()
-        plt.tight_layout()
-
+    ax.set(yscale="log", xlim=(-10, 10),
+           xlabel=r"$\delta u / \sigma$", ylabel="PDF (offset)")
+    ax.legend()
+    fig.tight_layout()
     plt.show()
 
-    return x, S2, K
+    return tau, S2, K
