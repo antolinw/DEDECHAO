@@ -133,7 +133,11 @@ def plot_isotropic_psd(
     plt.xlabel("Wavenumber k")
     plt.ylabel("E(k)")
     plt.grid(True, which="both", ls="--", alpha=0.3)
-    plt.show()
+    name_fig = "spatial_spectrum.png"
+    plt.show(block=False)
+    plt.savefig(name_fig)
+    plt.pause(1)
+    plt.close()
 
     return kr, psd
 
@@ -450,7 +454,11 @@ def plot_spectrum_mean_std(
     plt.legend()
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
-    plt.show()
+    name_fig = "temporal_spectrum.png"
+    plt.show(block=False)
+    plt.savefig(name_fig)
+    plt.pause(1)
+    plt.close()
 
 def _compute_structure_functions(signal, small_scale, large_scale, nv, Nreal):
     """
