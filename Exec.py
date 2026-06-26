@@ -148,6 +148,6 @@ x, S2, K = plot_structure_functions_temporal(
     large_scale=np.size(V_x[:,0,0,0])//4,  # Large scale in numbers of step, can be larger than L integral
     dt=dt,              # pas de temps en secondes
     tau_gauss=T,        # échelle intégrale ou de gaussianisation
-    c2=0.025,
+    c2=cfg.c2,
     pdf_scales_indices=(0, 5, 10, 35, 60)
 )
