@@ -54,12 +54,9 @@ def run_simulation_W(cfg):
     return V_x, V_y, V_z, stream, vort, epsi
 
 def wavelet_noise(cfg):  
-    # Bruit ensembliste
+    # White noise in physical space (ensembliste)
     noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N)
-
-
     A, D = cfg.dwt(noise)
-
     # Zero mean (eg B_hat[0, 0] = 0)
     A.zero_()
 
@@ -74,13 +71,7 @@ def wavelet_colored_noise(cfg):
     with a prescribed scale-dependent spectrum.
     """
 
-    # White noise in physical space (ensembliste)
-    noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N)
-
-    A, D = cfg.dwt(noise)
-
-    # Remove mean by zeroing approximate coefficients (k=0 analogue)
-    A.zero_()
+    A, D = wavelet_noise(cfg)
 
     for j in range(cfg.J):
         # Fine -> coarse indexing
