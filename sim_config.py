@@ -121,14 +121,12 @@ class Parameters(SimulationConfig):
 
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
-            tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
 
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
-            tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
             np.seterr(divide = 'ignore') 
             S2 = ( K / K_Lx ) ** (-self.dim) # cf eq (34) of Ruffenach et al. (2026)
@@ -139,6 +137,7 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
+        tau_e = self.tau_0e_factor * tau_B
         self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
         tau_B_filtered = tau_B[~np.isinf(tau_B)]
         self.Big_t = np.max(tau_B_filtered) * 0.5
