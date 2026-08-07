@@ -72,11 +72,6 @@ class Parameters(SimulationConfig):
             KY = KY[:,:,np.newaxis]
             K = np.sqrt(KX**2 + KY**2)
             Kv = np.concat((KX, KY), axis= 2)
-            if self.wavelet:
-                KX = KX[:,:,0]
-                KY = KY[:,:,0]
-                K = K[:,:,0]
-                Kv = Kv[:,:,0]
             self.KX = KX
             self.KY = KY
         elif self.dim == 3 :
@@ -87,12 +82,6 @@ class Parameters(SimulationConfig):
             K = np.sqrt(KX**2 + KY**2 + KZ**2)
             Kv = np.concat((KX, KY, KZ), axis= 3)
             Kv = Kv[:,:,:,:,np.newaxis]
-            if self.wavelet:
-                KX = KX[:,:,:,0]
-                KY = KY[:,:,:,0]
-                KZ = KZ[:,:,:,0]
-                K = K[:,:,:,0]
-                Kv = Kv[:,:,:,0]
             self.KX = KX
             self.KY = KY
             self.KZ = KZ
@@ -176,11 +165,6 @@ class Parameters(SimulationConfig):
             S1[:, :, self.PN] = 0
         else:
             raise ValueError("Incorrect dim")
-
-    def cleanAliasing_W(self,S1):
-        S1[0, 0, 0] = 0
-        S1[0, self.PN, :] = 0
-        S1[0, :, self.PN] = 0
 
     def zeroField(self):
         if self.dim == 2 :

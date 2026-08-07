@@ -1,6 +1,7 @@
 import numpy as np
 import torch 
 from pytorch_wavelets import DWTForward, DWTInverse
+from Bi_OU_core import velocity_from_Streamfunction
 
 def run_simulation_W(cfg): 
     # ---- init shapes ----
@@ -17,14 +18,9 @@ def run_simulation_W(cfg):
     B_A, B_D = wavelet_noise(cfg)  
     lepsi_A, lepsi_D = wavelet_colored_noise(cfg)
 
-    Vx, Vy, Vz, s, w, e = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
+    V_x[0,:], V_y[0,:], V_z[0,:], stream[0:], vort[0:], epsi[0,:]\
+            = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
 
-    V_x[0] = np.moveaxis(Vx, 0, -1)
-    V_y[0] = np.moveaxis(Vy, 0, -1)
-    V_z[0] = np.moveaxis(Vz, 0, -1)
-    stream[0] = np.moveaxis(s, 0, -1)
-    vort[0] = np.moveaxis(w, 0, -1)
-    epsi[0] = np.moveaxis(e, 0, -1)
 
     # -------------------------
     # Time loop
@@ -40,16 +36,11 @@ def run_simulation_W(cfg):
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
 
         # ---- Reconstruction & velocity ----
-        Vx, Vy, Vz, s, w, e = CMG_velocity_W(
+        V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream[t+1,:] , vort[t+1,:], epsi[t+1,:] \
+                    = CMG_velocity_W(
             B_A, B_D, lepsi_A, lepsi_D, cfg
         )
 
-        V_x[t+1] = np.moveaxis(Vx, 0, -1)
-        V_y[t+1] = np.moveaxis(Vy, 0, -1)
-        V_z[t+1] = np.moveaxis(Vz, 0, -1)
-        stream[t+1] = np.moveaxis(s, 0, -1)
-        vort[t+1] = np.moveaxis(w, 0, -1)
-        epsi[t+1] = np.moveaxis(e, 0, -1)
 
     return V_x, V_y, V_z, stream, vort, epsi
 
@@ -145,31 +136,18 @@ def spectral_velocity(B, epsi, cfg):
     B = B.cpu().numpy()
     epsi = epsi.cpu().numpy()
 
-    Bepsi_hat = np.fft.fft2(B * epsi, axes=(-2, -1))
-    cfg.cleanAliasing_W(Bepsi_hat)
 
-    stream_hat = cfg.A * Bepsi_hat
-    v_hat_x = 1j * cfg.KY * stream_hat
-    v_hat_y = -1j * cfg.KX * stream_hat
-    vort_hat = -cfg.K**2 * stream_hat
+    B = np.moveaxis(B, 0, -1)
+    epsi = np.moveaxis(epsi, 0, -1)
 
-    stream = np.fft.ifft2(stream_hat, axes=(-2, -1)).real
-    Vx = np.fft.ifft2(v_hat_x, axes=(-2, -1)).real
-    Vy = np.fft.ifft2(v_hat_y, axes=(-2, -1)).real
-    vort = np.fft.ifft2(vort_hat, axes=(-2, -1)).real
+    # WARNING : OLD CMG method !!!
+    Bepsi = B * epsi
 
-    # normalize per ensemble
-    ampli = cfg.K_LS * np.sqrt((stream**2).mean(axis=(-2, -1), keepdims=True))
+    Bepsi_hat = np.fft.fft2(Bepsi, axes=(0,1))
+    cfg.cleanAliasing(Bepsi_hat)
+    
+    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
 
-    stream /= ampli
-    Vx /= ampli
-    Vy /= ampli
-    vort /= ampli
-
-    # Vz = cfg.zeroSpatialField()
-    Vz = np.zeros_like(Vx)
-
-    return Vx, Vy, Vz, stream, vort, epsi
 
 def CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg):
     B, lepsi = reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, cfg)
