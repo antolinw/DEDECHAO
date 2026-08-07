@@ -8,8 +8,8 @@ def run_simulation_W(cfg):
     V_x = cfg.zeroField()
     V_y = cfg.zeroField()
     V_z = cfg.zeroField()
-    stream = cfg.zeroField()
-    vort = cfg.zeroField()
+    stream_z = cfg.zeroField()
+    vort_z = cfg.zeroField()
     epsi = cfg.zeroField()
 
     # -------------------------
@@ -18,7 +18,7 @@ def run_simulation_W(cfg):
     B_A, B_D = wavelet_noise(cfg)  
     lepsi_A, lepsi_D = wavelet_colored_noise(cfg)
 
-    V_x[0,:], V_y[0,:], V_z[0,:], stream[0:], vort[0:], epsi[0,:]\
+    V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
             = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
 
 
@@ -36,13 +36,13 @@ def run_simulation_W(cfg):
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
 
         # ---- Reconstruction & velocity ----
-        V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream[t+1,:] , vort[t+1,:], epsi[t+1,:] \
+        V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
                     = CMG_velocity_W(
             B_A, B_D, lepsi_A, lepsi_D, cfg
         )
 
 
-    return V_x, V_y, V_z, stream, vort, epsi
+    return V_x, V_y, V_z, stream_z, vort_z, epsi
 
 def wavelet_noise(cfg):  
     # White noise in physical space (ensembliste)
