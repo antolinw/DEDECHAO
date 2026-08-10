@@ -57,11 +57,18 @@ plot_surface(vort_z[0,:,:,0], title="vort_z at t=0 and z=0")
 #plot_surface(vort_z[-1,:,:,0], title="vort_z at t=tf")
 #plot_surface(epsi[-1,:,:,0], title="epsi at t=tf")
 
-## Spectra (Spatial) :
+## KE spatial spectrum :
 krOU, psdOU = plot_isotropic_psd(
    V_x[0,:,:,0],
    label="Bi-OU_t0",
    slope=-rho
+)
+
+## intermittency spatial spectrum :
+krOU, psdOU = plot_isotropic_psd(
+   epsi[0,:,:,0],
+   label="epsi_t0",
+   slope=-1
 )
 
 # krOU, psdOU = plot_isotropic_psd(

@@ -15,7 +15,7 @@ def run_simulation_W(cfg):
     # -------------------------
     # Initialization
     # -------------------------
-    lepsi_A, lepsi_D = wavelet_colored_noise(cfg)
+    lepsi_A, lepsi_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj)
     epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
     if cfg.new_spTimeGMC:
         B_A, B_D = wavelet_CMG_noise(epsi_t,cfg)
@@ -37,7 +37,7 @@ def run_simulation_W(cfg):
         B_D = wavelet_ou_update(B_D, cfg.exp_B, cfg.noise_B, noise_B_D)
 
         # ---- OU process for log-epsilon ----
-        _, noise_e_D = wavelet_colored_noise(cfg)
+        _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj)
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
         epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
@@ -75,7 +75,7 @@ def wavelet_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
 def spectrum_model_scale(j, alpha, beta):
     return 2.0 ** (alpha * j + beta)
 
-def wavelet_colored_noise(cfg):  
+def wavelet_colored_noise(cfg, spectrum):  
     """
     Generate colored Gaussian noise directly in wavelet space
     with a prescribed scale-dependent spectrum.
@@ -92,12 +92,10 @@ def wavelet_colored_noise(cfg):
         Nj = 3 * (npx ** 2)
 
         # Characteristic wavenumber
-        kx = (2.0 * np.pi) / ((2 ** (cfg.J - j)) * cfg.dx)
-        ky = (2.0 * np.pi) / ((2 ** (cfg.J - j)) * cfg.dx)
-        kappa_j = min(kx, ky)
+        kappa_j = cfg.k_j[j]
 
         # Target energy at scale j
-        Ej = spectrum_model_scale(cfg.J - j, -cfg.tau_0B, cfg.beta)
+        Ej = spectrum[j]
 
         # Energy per coefficient
         coef_s = kappa_j * (3.0 / 4.0) / Nj

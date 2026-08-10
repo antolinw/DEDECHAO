@@ -111,6 +111,8 @@ class Parameters(SimulationConfig):
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
 
+            self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
+
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
 
