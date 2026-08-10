@@ -67,13 +67,9 @@ def CMG_from_noise(B_real,lepsi_hat,cfg, intermittency = True):
         if cfg.dim == 3:
             lepsi_real = np.fft.ifft(lepsi_real, axis=2).real
             lepsi_real = lepsi_real[:,:,:,:,np.newaxis]
-        # Set the correct variance (related to c2)
-        lepsi_real /= lepsi_real.std() 
-        lepsi_real *= np.sqrt( cfg.c2_eff )
-        lepsi_real -= lepsi_real.var() 
     else:
-        lepsi_real = cfg.zeroSpatialField()
-    epsi = np.exp(lepsi_real)
+        lepsi_real = np.nan
+    epsi = cfg.intermittency(lepsi_real, intermittency)
 
     Bepsi_hat = np.fft.fft2(B_real * epsi, axes=(0,1))
     if cfg.dim == 3:

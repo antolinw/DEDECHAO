@@ -124,19 +124,12 @@ def reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, cfg):
     B = cfg.idwt((B_A, B_D))[:, 0]        # (ens, N, N)
     lepsi = cfg.idwt((lepsi_A, lepsi_D))[:, 0]
 
+    B = B.cpu().numpy()
+    lepsi = lepsi.cpu().numpy()
+
     return B, lepsi
 
-def intermittency(lepsi,cfg):
-    lepsi /= lepsi.std() 
-    lepsi *= np.sqrt(cfg.c2_eff)
-    lepsi -= lepsi.var() 
-    return torch.exp(lepsi)
-
 def spectral_velocity(B, epsi, cfg):
-    B = B.cpu().numpy()
-    epsi = epsi.cpu().numpy()
-
-
     B = np.moveaxis(B, 0, -1)
     epsi = np.moveaxis(epsi, 0, -1)
 
@@ -151,5 +144,5 @@ def spectral_velocity(B, epsi, cfg):
 
 def CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg):
     B, lepsi = reconstruct_fields(B_A, B_D, lepsi_A, lepsi_D, cfg)
-    epsi = intermittency(lepsi,cfg)
+    epsi = cfg.intermittency(lepsi)
     return spectral_velocity(B, epsi, cfg)

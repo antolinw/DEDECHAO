@@ -152,6 +152,17 @@ class Parameters(SimulationConfig):
         self.noise_B = noise_B
         self.exp_e = exp_e
         self.noise_e = noise_e
+
+
+    def intermittency(self,lepsi_real, intermittency = True):
+        if intermittency:
+            # Set the correct variance (related to c2)
+            lepsi_real /= lepsi_real.std() 
+            lepsi_real *= np.sqrt( self.c2_eff )
+            lepsi_real -= lepsi_real.var() 
+        else:
+            lepsi_real = self.zeroSpatialField()
+        return np.exp(lepsi_real)
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :
