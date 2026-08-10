@@ -49,13 +49,10 @@ def CMG_noise(lepsi_hat,cfg):
     return Bepsi_hat
 
 def CMG_velocity(B_hat,lepsi_hat,cfg, intermittency = True):
-
     # ---- Real space ----
     B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
     if cfg.dim == 3:
         B_real = np.fft.ifft(B_real, axis=2).real
-    # B_real = (B_real - B_real.mean()) / B_real.std() # needed ???
-
     Bepsi_hat,epsi = CMG_from_noise(B_real,lepsi_hat,cfg, intermittency)
 
     return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
