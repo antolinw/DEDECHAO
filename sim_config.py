@@ -163,6 +163,13 @@ class Parameters(SimulationConfig):
         else:
             lepsi_real = self.zeroSpatialField()
         return np.exp(lepsi_real)
+
+    def CMG_from_noise(self,B_real,epsi, intermittency = True):
+        if intermittency:
+            Bepsi = B_real * epsi
+        else:
+            Bepsi = B_real
+        return Bepsi
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :

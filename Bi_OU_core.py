@@ -13,7 +13,7 @@ def run_simulation(cfg):
     lepsi_hat =  np.sqrt(cfg.S2) * fftnoise(cfg, scalar = True)
     epsi_t = epsilon(lepsi_hat,cfg)
     if cfg.new_spTimeGMC:
-        B_hat = CMG_noise(epsi_t,cfg)
+        B_hat = FFT_CMG_noise(epsi_t,cfg)
     else:
         B_hat = fftnoise(cfg)
     V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
@@ -22,7 +22,7 @@ def run_simulation(cfg):
     for t in range(cfg.N_steps-1):
         # ---- OU process for B ----
         if cfg.new_spTimeGMC:
-            B_hat = cfg.exp_B * B_hat + cfg.noise_B * CMG_noise(epsi_t,cfg)
+            B_hat = cfg.exp_B * B_hat + cfg.noise_B * FFT_CMG_noise(epsi_t,cfg)
         else:
             B_hat = cfg.exp_B * B_hat + cfg.noise_B * fftnoise(cfg)
         # ---- OU process for epsilon ----
@@ -46,16 +46,15 @@ def fftnoise(cfg, scalar = False):
 
     return B_hat
 
-def CMG_noise(epsi,cfg):
-    Bepsi_hat = CMG_from_noise(cfg.whiteNoise(),epsi,cfg)
-    return Bepsi_hat
+def FFT_CMG_noise(epsi,cfg):
+    return FFT_CMG_from_noise(cfg.whiteNoise(),epsi,cfg)
 
 def CMG_velocity(B_hat,epsi,cfg, intermittency = True):
     # ---- Real space ----
     B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
     if cfg.dim == 3:
         B_real = np.fft.ifft(B_real, axis=2).real
-    Bepsi_hat = CMG_from_noise(B_real,epsi,cfg, intermittency)
+    Bepsi_hat = FFT_CMG_from_noise(B_real,epsi,cfg, intermittency)
 
     return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
 
@@ -66,11 +65,8 @@ def epsilon(lepsi_hat,cfg):
         lepsi_real = lepsi_real[:,:,:,:,np.newaxis]
     return cfg.intermittency(lepsi_real) 
 
-def CMG_from_noise(B_real,epsi,cfg, intermittency = True):
-    if intermittency:
-        Bepsi = B_real * epsi
-    else:
-        Bepsi = B_real
+def FFT_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
+    Bepsi = cfg.CMG_from_noise(B_real,epsi, intermittency)
     Bepsi_hat = np.fft.fft2(Bepsi, axes=(0,1))
     if cfg.dim == 3:
         Bepsi_hat = np.fft.fft(Bepsi_hat, axis=2) 
