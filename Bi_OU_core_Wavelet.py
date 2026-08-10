@@ -123,6 +123,7 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
 def reconstruct_field(B_A, B_D, cfg):
     B = cfg.idwt((B_A, B_D))[:, 0]        # (ens, N, N)
     B = B.cpu().numpy()
+    B = np.moveaxis(B, 0, -1)
     return B
 
 def epsilon(lepsi_A, lepsi_D,cfg):
@@ -130,8 +131,6 @@ def epsilon(lepsi_A, lepsi_D,cfg):
     return cfg.intermittency(lepsi) 
 
 def spectral_velocity(B, epsi, cfg):
-    B = np.moveaxis(B, 0, -1)
-    epsi = np.moveaxis(epsi, 0, -1)
 
     # WARNING : OLD CMG method !!!
     Bepsi = B * epsi
