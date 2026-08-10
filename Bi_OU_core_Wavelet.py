@@ -1,7 +1,7 @@
 import numpy as np
 import torch 
 from pytorch_wavelets import DWTForward, DWTInverse
-from Bi_OU_core import velocity_from_Streamfunction
+from Bi_OU_core import velocity_from_Streamfunction, FFT_CMG_from_noise
 
 def run_simulation_W(cfg): 
     # ---- init shapes ----
@@ -15,12 +15,14 @@ def run_simulation_W(cfg):
     # -------------------------
     # Initialization
     # -------------------------
-    B_A, B_D = wavelet_noise(cfg)  
     lepsi_A, lepsi_D = wavelet_colored_noise(cfg)
-
+    epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
+    if cfg.new_spTimeGMC:
+        B_A, B_D = wavelet_CMG_noise(epsi_t,cfg)
+    else:
+        B_A, B_D = wavelet_noise(cfg)
     V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
-            = CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg)
-
+            = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     # -------------------------
     # Time loop
@@ -28,26 +30,43 @@ def run_simulation_W(cfg):
     for t in range(cfg.N_steps - 1):
 
         # ---- OU process for B ----
-        _, noise_B_D = wavelet_noise(cfg)
+        if cfg.new_spTimeGMC:
+            _, noise_B_D = wavelet_CMG_noise(epsi_t,cfg)
+        else:
+            _, noise_B_D = wavelet_noise(cfg)
         B_D = wavelet_ou_update(B_D, cfg.exp_B, cfg.noise_B, noise_B_D)
 
         # ---- OU process for log-epsilon ----
         _, noise_e_D = wavelet_noise(cfg)
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
+        epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
         # ---- Reconstruction & velocity ----
         V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
                     = CMG_velocity_W(
-            B_A, B_D, lepsi_A, lepsi_D, cfg
-        )
+            B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
 
 
     return V_x, V_y, V_z, stream_z, vort_z, epsi
 
 def wavelet_noise(cfg):  
     # White noise in physical space (ensembliste)
-    noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N)
+    noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
     A, D = cfg.dwt(noise)
+    # Zero mean (eg B_hat[0, 0] = 0)
+    A.zero_()
+
+    return A, D
+
+def wavelet_CMG_noise(epsi,cfg):
+    return wavelet_CMG_from_noise(cfg.whiteNoise(),epsi,cfg) # default format (cfg.N, cfg.N, cfg.n_ens)
+
+def wavelet_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
+    Bepsi = cfg.CMG_from_noise(B_real,epsi, intermittency) # default format (cfg.N, cfg.N, cfg.n_ens)
+
+    Bepsi = np.moveaxis(Bepsi[np.newaxis,:], -1, 0) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
+    Bepsi = torch.tensor(Bepsi,dtype=torch.float32) # torch for DWT
+    A, D = cfg.dwt(Bepsi)
     # Zero mean (eg B_hat[0, 0] = 0)
     A.zero_()
 
@@ -130,18 +149,7 @@ def epsilon(lepsi_A, lepsi_D,cfg):
     lepsi = reconstruct_field(lepsi_A, lepsi_D, cfg)
     return cfg.intermittency(lepsi) 
 
-def spectral_velocity(B, epsi, cfg):
-
-    # WARNING : OLD CMG method !!!
-    Bepsi = B * epsi
-
-    Bepsi_hat = np.fft.fft2(Bepsi, axes=(0,1))
-    cfg.cleanAliasing(Bepsi_hat)
-    
-    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
-
-
-def CMG_velocity_W(B_A, B_D, lepsi_A, lepsi_D, cfg):
+def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
     B = reconstruct_field(B_A, B_D, cfg)
-    epsi = epsilon(lepsi_A, lepsi_D,cfg)
-    return spectral_velocity(B, epsi, cfg)
+    Bepsi_hat = FFT_CMG_from_noise(B,epsi,cfg, intermittency)
+    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
