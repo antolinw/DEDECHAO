@@ -22,9 +22,8 @@ class SimulationConfig:
     L_LS: float = Lx         # large spatial scale
 
     dim: float = 2.0               # spatial dimension
-    c2: float = 0.025              # intermittency coefficient (must be < c1 /2, ]0,0.5[ in 2D)
-    rho_s: float = 1.66            # spatial spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
-    gamma_t: float = rho_s         # temporal spectrum slope
+    rho_s: float = 1.66            # spatial KE spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
+    gamma_t: float = rho_s         # temporal KE spectrum slope
     c1 = (rho_s - 1) / 2.          # fractal exponent
 
     D3 = 1
@@ -55,9 +54,9 @@ class Parameters(SimulationConfig):
         self.dx = self.Lx / N
 
         self.wavelet = self.method == 'Wavelet'
-        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
-        #theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
-        theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum  
+        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale of the streamfunction
+        theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum of the streamfunction
+        # i.e. theta_1 = rho_s + 2 + self.dim-1        
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
         self.K_LS = K_LS

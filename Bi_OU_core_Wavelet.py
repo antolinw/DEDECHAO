@@ -97,7 +97,7 @@ def wavelet_colored_noise(cfg, spectrum):
         # Target energy at scale j
         Ej = spectrum[j]
 
-        # Energy per coefficient
+        # Energy per coefficient (Talla's magic coefficient)
         coef_s = kappa_j * (3.0 / 4.0) / Nj
         scale_factor = np.sqrt(coef_s * Ej)
 
