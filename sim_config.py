@@ -15,7 +15,7 @@ class SimulationConfig:
     J: int = 9                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
-    new_spTimeGMC = False          # Wandrille's method for spatiotemporal GMC
+    new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
     # --------- Physical ---------
     Lx: float = 1                  # domain size
@@ -72,11 +72,6 @@ class Parameters(SimulationConfig):
             KY = KY[:,:,np.newaxis]
             K = np.sqrt(KX**2 + KY**2)
             Kv = np.concat((KX, KY), axis= 2)
-            if self.wavelet:
-                KX = KX[:,:,0]
-                KY = KY[:,:,0]
-                K = K[:,:,0]
-                Kv = Kv[:,:,0]
             self.KX = KX
             self.KY = KY
         elif self.dim == 3 :
@@ -87,12 +82,6 @@ class Parameters(SimulationConfig):
             K = np.sqrt(KX**2 + KY**2 + KZ**2)
             Kv = np.concat((KX, KY, KZ), axis= 3)
             Kv = Kv[:,:,:,:,np.newaxis]
-            if self.wavelet:
-                KX = KX[:,:,:,0]
-                KY = KY[:,:,:,0]
-                KZ = KZ[:,:,:,0]
-                K = K[:,:,:,0]
-                Kv = Kv[:,:,:,0]
             self.KX = KX
             self.KY = KY
             self.KZ = KZ
@@ -121,14 +110,14 @@ class Parameters(SimulationConfig):
 
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
-            tau_e = (self.tau_0e_factor * self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-self.z_eps / 2))
+
+            self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
 
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
-            tau_e = (self.tau_0e_factor * self.tau_0B) * (1 + (K / K_LS)**2 ) ** ( - self.z_eps/2)
 
             np.seterr(divide = 'ignore') 
             S2 = ( K / K_Lx ) ** (-self.dim) # cf eq (34) of Ruffenach et al. (2026)
@@ -139,6 +128,7 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
+        tau_e = self.tau_0e_factor * tau_B
         self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
         tau_B_filtered = tau_B[~np.isinf(tau_B)]
         self.Big_t = np.max(tau_B_filtered) * 0.5
@@ -164,6 +154,24 @@ class Parameters(SimulationConfig):
         self.noise_B = noise_B
         self.exp_e = exp_e
         self.noise_e = noise_e
+
+
+    def intermittency(self,lepsi_real, intermittency = True):
+        if intermittency:
+            # Set the correct variance (related to c2)
+            lepsi_real /= lepsi_real.std() 
+            lepsi_real *= np.sqrt( self.c2_eff )
+            lepsi_real -= lepsi_real.var() 
+        else:
+            lepsi_real = self.zeroSpatialField()
+        return np.exp(lepsi_real)
+
+    def CMG_from_noise(self,B_real,epsi, intermittency = True):
+        if intermittency:
+            Bepsi = B_real * epsi
+        else:
+            Bepsi = B_real
+        return Bepsi
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :
@@ -177,11 +185,6 @@ class Parameters(SimulationConfig):
             S1[:, :, self.PN] = 0
         else:
             raise ValueError("Incorrect dim")
-
-    def cleanAliasing_W(self,S1):
-        S1[0, 0, 0] = 0
-        S1[0, self.PN, :] = 0
-        S1[0, :, self.PN] = 0
 
     def zeroField(self):
         if self.dim == 2 :
