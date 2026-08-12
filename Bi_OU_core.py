@@ -83,8 +83,8 @@ def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
 
     # ---- Velocity ----
     if cfg.dim == 2:
-        v_hat_x = 1j * cfg.KY * stream_hat
-        v_hat_y = -1j * cfg.KX * stream_hat
+        v_hat_x = - 1j * cfg.KY * stream_hat
+        v_hat_y = + 1j * cfg.KX * stream_hat
     elif cfg.dim == 3:
         v_hat = np.cross( 1j * cfg.Kv, stream_hat, axisa=3, axisb=3, axisc=3)
     vort_hat = - cfg.K**2 * stream_hat
