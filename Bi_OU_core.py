@@ -38,10 +38,7 @@ def run_simulation(cfg):
 
 def fftnoise(cfg, scalar = False):
     xi = cfg.whiteNoise(scalar)
-    B_hat = np.fft.fft2(xi, axes=(0,1)) 
-    if cfg.dim == 3:
-        B_hat = np.fft.fft(B_hat, axis=2) 
-
+    B_hat = cfg.FFT(xi)
     cfg.cleanAliasing(B_hat)
 
     return B_hat
@@ -51,25 +48,20 @@ def FFT_CMG_noise(epsi,cfg):
 
 def CMG_velocity(B_hat,epsi,cfg, intermittency = True):
     # ---- Real space ----
-    B_real = np.fft.ifft2(B_hat, axes=(0,1)).real
-    if cfg.dim == 3:
-        B_real = np.fft.ifft(B_real, axis=2).real
+    B_real = cfg.IFFT(B_hat)
     Bepsi_hat = FFT_CMG_from_noise(B_real,epsi,cfg, intermittency)
 
     return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
 
 def epsilon(lepsi_hat,cfg):
-    lepsi_real = np.fft.ifft2(lepsi_hat, axes=(0,1)).real
+    lepsi_real = cfg.IFFT(lepsi_hat)
     if cfg.dim == 3:
-        lepsi_real = np.fft.ifft(lepsi_real, axis=2).real
         lepsi_real = lepsi_real[:,:,:,:,np.newaxis]
     return cfg.intermittency(lepsi_real) 
 
 def FFT_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
     Bepsi = cfg.CMG_from_noise(B_real,epsi, intermittency)
-    Bepsi_hat = np.fft.fft2(Bepsi, axes=(0,1))
-    if cfg.dim == 3:
-        Bepsi_hat = np.fft.fft(Bepsi_hat, axis=2) 
+    Bepsi_hat = cfg.FFT(Bepsi)
     cfg.cleanAliasing(Bepsi_hat)
 
     return Bepsi_hat
@@ -90,19 +82,16 @@ def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
         v_hat = np.cross( 1j * cfg.Kv, stream_hat, axisa=3, axisb=3, axisc=3)
         vort_hat = np.cross( 1j * cfg.Kv, v_hat, axisa=3, axisb=3, axisc=3)
 
-    stream = np.fft.ifft2(stream_hat, axes=(0,1)).real
-    vort = np.fft.ifft2(vort_hat, axes=(0,1)).real
+    stream = cfg.IFFT(stream_hat)
+    vort = cfg.IFFT(vort_hat)
     if cfg.dim == 2:
-        V_x = np.fft.ifft2(v_hat_x, axes=(0,1)).real
-        V_y = np.fft.ifft2(v_hat_y, axes=(0,1)).real
+        V_x = cfg.IFFT(v_hat_x)
+        V_y = cfg.IFFT(v_hat_y)
         V_z = cfg.zeroSpatialField()
         stream_z = stream
         vort_z = vort
     if cfg.dim == 3:
-        stream = np.fft.ifft(stream, axis=2).real
-        vort = np.fft.ifft(vort, axis=2).real
-        V = np.fft.ifft2(v_hat, axes=(0,1)).real
-        V = np.fft.ifft(V, axis=2).real
+        V = cfg.IFFT(v_hat)
 
         epsi = epsi[:,:,:,0,:]
         stream_z = stream[:,:,:,2,:]

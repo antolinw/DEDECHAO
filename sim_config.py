@@ -171,6 +171,23 @@ class Parameters(SimulationConfig):
         else:
             Bepsi = B_real
         return Bepsi
+
+    def FFT(self,B_hat):
+        if self.dim == 2:
+            return np.fft.fft2(B_hat, axes=(0,1))
+        elif self.dim == 3 :
+            return np.fft.fftn(B_hat, axes=(0,1,2))
+        else:
+            raise ValueError("Incorrect dim")
+
+    def IFFT(self,B_hat):
+        if self.dim == 2:
+            return np.fft.ifft2(B_hat, axes=(0,1)).real
+        elif self.dim == 3 :
+            return np.fft.ifftn(B_hat, axes=(0,1,2)).real
+        else:
+            raise ValueError("Incorrect dim")
+
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :
