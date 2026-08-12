@@ -74,10 +74,14 @@ def FFT_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
 
     return Bepsi_hat
 
+def FFT_streamfunction_from_noise(Bepsi_hat,epsi,cfg):
+    return cfg.A * Bepsi_hat
+
 def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
+    # ---- Streamfunction ----
+    stream_hat = FFT_streamfunction_from_noise(Bepsi_hat,epsi,cfg)
 
     # ---- Velocity ----
-    stream_hat = cfg.A * Bepsi_hat
     if cfg.dim == 2:
         v_hat_x = 1j * cfg.KY * stream_hat
         v_hat_y = -1j * cfg.KX * stream_hat
