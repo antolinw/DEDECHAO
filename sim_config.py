@@ -55,6 +55,7 @@ class Parameters(SimulationConfig):
 
         self.wavelet = self.method == 'Wavelet'
         z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale of the streamfunction
+        rho_streamfct = self.rho_s + 2            # spectrum slope of the omnidirectional spatial spectrum of the streamfunction
         theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum of the streamfunction
         # i.e. theta_1 = rho_s + 2 + self.dim-1        
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
@@ -111,6 +112,7 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
 
             self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
+            self.E_stream_kj = (1 + (self.k_j / K_LS)**2) ** (-rho_streamfct/2) 
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
