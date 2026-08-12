@@ -1,7 +1,8 @@
 import numpy as np
 import torch 
 from pytorch_wavelets import DWTForward, DWTInverse
-from Bi_OU_core import velocity_from_Streamfunction, FFT_CMG_from_noise
+from Bi_OU_core import FFT_streamfunction_from_noise, FFT_CMG_from_noise
+from finite_diff import ortho_grad_2d,curl_2d,curl_3d,lap_2d
 
 def run_simulation_W(cfg): 
     # ---- init shapes ----
@@ -150,4 +151,45 @@ def epsilon(lepsi_A, lepsi_D,cfg):
 def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
     B = reconstruct_field(B_A, B_D, cfg)
     Bepsi_hat = FFT_CMG_from_noise(B,epsi,cfg, intermittency)
-    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
+    return velocity_from_FFTnoise(Bepsi_hat,epsi,cfg)
+
+def velocity_from_FFTnoise(Bepsi_hat,epsi,cfg):
+    # ---- Streamfunction ----
+    stream_hat = FFT_streamfunction_from_noise(Bepsi_hat,epsi,cfg)
+    stream = cfg.IFFT(stream_hat)
+    return velocity_from_stream(stream,epsi,cfg)
+
+def velocity_from_stream(stream,epsi,cfg):
+    # ---- Velocity ----
+    if cfg.dim == 2:
+        V = ortho_grad_2d(stream,cfg.dx,cfg.dx)
+        vort = curl_2d(V,cfg.dx,cfg.dx)
+    elif cfg.dim == 3:
+        V = curl_3d(stream,cfg.dx,cfg.dx,cfg.dx)
+        vort = curl_3d(V,cfg.dx,cfg.dx,cfg.dx)
+
+    if cfg.dim == 2:
+        V_x = V[:,:,0,:]
+        V_y = V[:,:,1,:]
+        V_z = cfg.zeroSpatialField()
+        stream_z = stream
+        vort_z = vort
+    elif cfg.dim == 3:
+        epsi = epsi[:,:,:,0,:]
+        stream_z = stream[:,:,:,2,:]
+        vort_z = vort[:,:,:,2,:]
+        V_x = V[:,:,:,0,:]
+        V_y = V[:,:,:,1,:]
+        V_z = V[:,:,:,2,:]
+
+    # Set amplitude
+    ampli = cfg.K_LS * np.sqrt((stream_z[:]**2).mean()) # warning : create issues
+
+    stream_z /= ampli
+    V_x /= ampli
+    V_y /= ampli
+    V_z /= ampli
+    vort_z /= ampli
+
+    return V_x, V_y, V_z, stream_z, vort_z, epsi
+
