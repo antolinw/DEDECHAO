@@ -21,7 +21,9 @@ def plot_surface(field, title="", cmap="viridis"):
     fig.colorbar(surf)
     ax.set_title(title)
 
-    plt.show()
+    plt.show(block=False)
+    plt.pause(1)
+    plt.close()
 
     plot_img(field, title=title, cmap=cmap)
 
@@ -29,7 +31,9 @@ def plot_img(field, title="", cmap="viridis"):
     plt.imshow(field)
     plt.title(title)
     plt.colorbar()
-    plt.show()
+    plt.show(block=False)
+    plt.pause(1)
+    plt.close()
 
 def isotropic_psd_2d(u, dx=1.0, dy=1.0, window=False):
     """
