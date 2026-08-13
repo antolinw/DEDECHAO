@@ -1,7 +1,7 @@
 import numpy as np
 import torch 
 from pytorch_wavelets import DWTForward, DWTInverse
-from Bi_OU_core import velocity_from_Streamfunction, FFT_CMG_from_noise
+from finite_diff import ortho_grad_2d,curl_2d,curl_3d,lap_2d
 
 def run_simulation_W(cfg): 
     # ---- init shapes ----
@@ -72,6 +72,19 @@ def wavelet_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
 
     return A, D
 
+# def colored_noise(cfg, spectrum):
+#     A, D = wavelet_colored_noise(cfg, spectrum)
+#     return reconstruct_field(A, D, cfg)
+
+def coloring_noise(cfg, spectrum, noise):
+    noise = np.moveaxis(noise[np.newaxis,:], -1, 0) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
+    noise = torch.tensor(noise,dtype=torch.float32) # torch for DWT
+    A,D = cfg.dwt(noise)
+    A.zero_()
+    # ---- Streamfunction ----
+    A, D = wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
+    return reconstruct_field(A, D, cfg)
+
 def spectrum_model_scale(j, alpha, beta):
     return 2.0 ** (alpha * j + beta)
 
@@ -83,6 +96,14 @@ def wavelet_colored_noise(cfg, spectrum):
 
     A, D = wavelet_noise(cfg)
 
+    return  wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
+
+def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):  
+    """
+    Generate colored Gaussian noise directly in wavelet space
+    with a prescribed scale-dependent spectrum
+    and presribed noise
+    """
     for j in range(cfg.J):
         # Fine -> coarse indexing
         Dj = D[cfg.J - 1 - j]
@@ -97,7 +118,7 @@ def wavelet_colored_noise(cfg, spectrum):
         # Target energy at scale j
         Ej = spectrum[j]
 
-        # Energy per coefficient
+        # Energy per coefficient (Talla's magic coefficient)
         coef_s = kappa_j * (3.0 / 4.0) / Nj
         scale_factor = np.sqrt(coef_s * Ej)
 
@@ -149,5 +170,44 @@ def epsilon(lepsi_A, lepsi_D,cfg):
 
 def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
     B = reconstruct_field(B_A, B_D, cfg)
-    Bepsi_hat = FFT_CMG_from_noise(B,epsi,cfg, intermittency)
-    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
+    Bepsi = cfg.CMG_from_noise(B,epsi, intermittency)
+    return velocity_from_noise(Bepsi,epsi,cfg)
+
+def velocity_from_noise(Bepsi,epsi,cfg):
+    stream = coloring_noise(cfg, cfg.E_stream_kj, Bepsi)
+    return velocity_from_stream(stream,epsi,cfg)
+
+def velocity_from_stream(stream,epsi,cfg):
+    # ---- Velocity ----
+    if cfg.dim == 2:
+        V = ortho_grad_2d(stream,cfg.dx,cfg.dx)
+        vort = curl_2d(V,cfg.dx,cfg.dx)
+    elif cfg.dim == 3:
+        V = curl_3d(stream,cfg.dx,cfg.dx,cfg.dx)
+        vort = curl_3d(V,cfg.dx,cfg.dx,cfg.dx)
+
+    if cfg.dim == 2:
+        V_x = V[:,:,0,:]
+        V_y = V[:,:,1,:]
+        V_z = cfg.zeroSpatialField()
+        stream_z = stream
+        vort_z = vort
+    elif cfg.dim == 3:
+        epsi = epsi[:,:,:,0,:]
+        stream_z = stream[:,:,:,2,:]
+        vort_z = vort[:,:,:,2,:]
+        V_x = V[:,:,:,0,:]
+        V_y = V[:,:,:,1,:]
+        V_z = V[:,:,:,2,:]
+
+    # Set amplitude
+    ampli = cfg.K_LS * np.sqrt((stream_z[:]**2).mean()) # warning : create issues
+
+    stream_z /= ampli
+    V_x /= ampli
+    V_y /= ampli
+    V_z /= ampli
+    vort_z /= ampli
+
+    return V_x, V_y, V_z, stream_z, vort_z, epsi
+

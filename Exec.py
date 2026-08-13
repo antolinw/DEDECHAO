@@ -4,8 +4,8 @@ from scipy.stats import kurtosis, skew
 from sim_config import Parameters
 from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
-from plot import plot_img, plot_surface, plot_isotropic_psd, \
-                 save_field_gif_matplotlib, compute_spectrum, plot_spectrum, \
+from plot import plot_surface, plot_isotropic_spatial_psd, \
+                 save_field_gif_matplotlib, compute_temporal_spectrum, plot_spectrum, \
                  plot_spectrum_mean_std, zeta_n, plot_structure_functions, plot_increment_pdfs, \
                  plot_structure_functions_temporal, save_spiky_field_gif_matplotlib
 
@@ -58,20 +58,20 @@ plot_surface(vort_z[0,:,:,0], title="vort_z at t=0 and z=0")
 #plot_surface(epsi[-1,:,:,0], title="epsi at t=tf")
 
 ## KE spatial spectrum :
-krOU, psdOU = plot_isotropic_psd(
+krOU, psdOU = plot_isotropic_spatial_psd(
    V_x[0,:,:,0],
-   label="Bi-OU_t0",
+   label="Vx",
    slope=-rho
 )
 
 ## intermittency spatial spectrum :
-krOU, psdOU = plot_isotropic_psd(
+krOU, psdOU = plot_isotropic_spatial_psd(
    epsi[0,:,:,0],
    label="epsi_t0",
    slope=-1
 )
 
-# krOU, psdOU = plot_isotropic_psd(
+# krOU, psdOU = plot_isotropic_spatial_psd(
 #    V_x[900,:,:,0],
 #    label="Bi-OU_t900",
 #    slope=-rho
@@ -91,15 +91,15 @@ save_spiky_field_gif_matplotlib(
 ###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
 signal = V_x[:, :, :, 0]
 
-### Compute spectrum
-w, ke_hat = compute_spectrum(signal, cfg.Delta_t)
+### Compute temporal spectrum
+w, ke_hat = compute_temporal_spectrum(signal, cfg.Delta_t)
 
-### Plot spectrum averaged over space
+### Plot temporal spectrum averaged over space
 # ke_mean = ke_hat.mean(axis=(1,2))
 # ke_std  = ke_hat.std(axis=(1,2))
 #plot_spectrum(w, ke_mean, slope=-gamma)
 
-### Plot spectrum with mean and std
+### Plot temporal spectrum with mean and std
 plot_spectrum_mean_std(
     w,
     ke_hat,

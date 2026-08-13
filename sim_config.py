@@ -12,7 +12,7 @@ class SimulationConfig:
     # method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
-    J: int = 9                    # Number of level of decomposition for wavelet method
+    J: int = n_order                    # Number of level of decomposition for wavelet method
     beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
@@ -23,8 +23,8 @@ class SimulationConfig:
 
     dim: float = 2.0               # spatial dimension
     c2: float = 0.025              # intermittency coefficient (must be < c1 /2, ]0,0.5[ in 2D)
-    rho_s: float = 1.66            # spatial spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
-    gamma_t: float = rho_s         # temporal spectrum slope
+    rho_s: float = 1.66            # spatial KE spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
+    gamma_t: float = rho_s         # temporal KE spectrum slope
     c1 = (rho_s - 1) / 2.          # fractal exponent
 
     D3 = 1
@@ -55,9 +55,10 @@ class Parameters(SimulationConfig):
         self.dx = self.Lx / N
 
         self.wavelet = self.method == 'Wavelet'
-        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale
-        #theta_1 = self.rho_s + self.dim + 1            # spectrum slope of the bidirectionnal spatial spectrum
-        theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum  
+        z = (self.rho_s - 1) / (self.gamma_t - 1)      # scaling slope for time scale of the streamfunction
+        rho_streamfct = self.rho_s + 2            # spectrum slope of the omnidirectional spatial spectrum of the streamfunction
+        theta_1 = 2 * self.nu_m + self.dim + 2         # spectrum slope of the bidirectionnal spatial spectrum of the streamfunction
+        # i.e. theta_1 = rho_s + 2 + self.dim-1        
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
         self.K_LS = K_LS
@@ -112,6 +113,7 @@ class Parameters(SimulationConfig):
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
 
             self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
+            self.E_stream_kj = (1 + (self.k_j / K_LS)**2) ** (-rho_streamfct/2) 
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
@@ -172,6 +174,23 @@ class Parameters(SimulationConfig):
         else:
             Bepsi = B_real
         return Bepsi
+
+    def FFT(self,B_hat):
+        if self.dim == 2:
+            return np.fft.fft2(B_hat, axes=(0,1))
+        elif self.dim == 3 :
+            return np.fft.fftn(B_hat, axes=(0,1,2))
+        else:
+            raise ValueError("Incorrect dim")
+
+    def IFFT(self,B_hat):
+        if self.dim == 2:
+            return np.fft.ifft2(B_hat, axes=(0,1)).real
+        elif self.dim == 3 :
+            return np.fft.ifftn(B_hat, axes=(0,1,2)).real
+        else:
+            raise ValueError("Incorrect dim")
+
     
     def cleanAliasing(self,S1):
         if self.dim == 2 :
