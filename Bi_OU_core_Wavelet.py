@@ -125,6 +125,7 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
         # Apply scaling (broadcasted over ensemble + subbands)
         D[cfg.J - 1 - j] = scale_factor * Dj
 
+    A.zero_()
     return A, D
 
 def wavelet_ou_update(D, exp_j, noise_j, noise_D): 
