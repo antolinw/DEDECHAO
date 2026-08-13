@@ -104,7 +104,28 @@ plot_spectrum_mean_std(
     w,
     ke_hat,
     slope=-gamma,
-    std_factor=1.0
+    std_factor=1.0,
+    filename= "temporal_spectrum_mean_std_Vx.png"
+)
+
+###Temporal Spectrum take at a fixed point (here aprx the center of the domain)
+signal = epsi[:, :, :, 0]
+
+### Compute temporal spectrum
+w, ke_hat = compute_temporal_spectrum(signal, cfg.Delta_t)
+
+### Plot temporal spectrum averaged over space
+# ke_mean = ke_hat.mean(axis=(1,2))
+# ke_std  = ke_hat.std(axis=(1,2))
+#plot_spectrum(w, ke_mean, slope=-gamma)
+
+### Plot temporal spectrum with mean and std
+plot_spectrum_mean_std(
+    w,
+    ke_hat,
+    slope=-1,
+    std_factor=1.0,
+    filename= "temporal_spectrum_mean_std_epsi.png"
 )
 
 ### GIF of time evolution
