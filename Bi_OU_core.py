@@ -51,7 +51,7 @@ def CMG_velocity(B_hat,epsi,cfg, intermittency = True):
     B_real = cfg.IFFT(B_hat)
     Bepsi_hat = FFT_CMG_from_noise(B_real,epsi,cfg, intermittency)
 
-    return velocity_from_Streamfunction(Bepsi_hat,epsi,cfg)
+    return velocity_from_FFTnoise(Bepsi_hat,epsi,cfg)
 
 def epsilon(lepsi_hat,cfg):
     lepsi_real = cfg.IFFT(lepsi_hat)
@@ -66,13 +66,15 @@ def FFT_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
 
     return Bepsi_hat
 
-def FFT_streamfunction_from_noise(Bepsi_hat,epsi,cfg):
+def FFT_streamfunction_from_noise(Bepsi_hat,cfg):
     return cfg.A * Bepsi_hat
 
-def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
+def velocity_from_FFTnoise(Bepsi_hat,epsi,cfg):
     # ---- Streamfunction ----
-    stream_hat = FFT_streamfunction_from_noise(Bepsi_hat,epsi,cfg)
+    stream_hat = FFT_streamfunction_from_noise(Bepsi_hat,cfg)
+    return velocity_from_FFTstream(stream_hat,epsi,cfg)
 
+def velocity_from_FFTstream(stream_hat,epsi,cfg):
     # ---- Velocity ----
     if cfg.dim == 2:
         v_hat_x = - 1j * cfg.KY * stream_hat
@@ -90,7 +92,7 @@ def velocity_from_Streamfunction(Bepsi_hat,epsi,cfg):
         V_z = cfg.zeroSpatialField()
         stream_z = stream
         vort_z = vort
-    if cfg.dim == 3:
+    elif cfg.dim == 3:
         V = cfg.IFFT(v_hat)
 
         epsi = epsi[:,:,:,0,:]
