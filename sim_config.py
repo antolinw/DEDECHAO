@@ -41,10 +41,12 @@ class SimulationConfig:
 class Parameters(SimulationConfig): 
     def __init__(self):
         super().__init__()
-    
+        if (self.c1 >= 1.0):
+            print("ACHTUNG : c1 >=1.0 i.e the velocity field is diffenrentiable.")
+            print("This is not realistic for turbulence.")
         #Checking core dynamical parameters (2D)
-        if (self.c2 >= self.c1 / 2) or (self.c1 >= 1.0):
-            raise ValueError("Parameters must repect : c2 < c1/2 and c1 < 1.0 for 2D simulations. " \
+        if (self.c2 >= np.sqrt(2*self.dim)) or (self.c2 >= self.c1 / 2) or (self.c1 <= 0.0):
+            raise ValueError("Parameters must repect : c2 < c1/2 and c1 > 0.0 for 2D simulations. " \
                              + "Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
         else:
             print(f"Using consistent parameters: " \
