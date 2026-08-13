@@ -89,7 +89,7 @@ def isotropic_psd_2d(u, dx=1.0, dy=1.0, window=False):
 
     return kr, psd
 
-def plot_isotropic_psd(
+def plot_isotropic_spatial_psd(
     field,
     dx=1.0,
     dy=1.0,
@@ -133,7 +133,7 @@ def plot_isotropic_psd(
     plt.xlabel("Wavenumber k")
     plt.ylabel("E(k)")
     plt.grid(True, which="both", ls="--", alpha=0.3)
-    name_fig = "spatial_spectrum.png"
+    name_fig = label + "spatial_spectrum.png"
     plt.show(block=False)
     plt.savefig(name_fig)
     plt.pause(1)
@@ -291,7 +291,7 @@ def save_spiky_field_gif_matplotlib(
 
     print(f"GIF saved as {filename}")
 
-def compute_spectrum(signal, dt, axis=0):
+def compute_temporal_spectrum(signal, dt, axis=0):
     """
     Compute temporal power spectrum of a signal.
 
