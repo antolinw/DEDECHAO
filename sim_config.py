@@ -22,6 +22,7 @@ class SimulationConfig:
     L_LS: float = Lx         # large spatial scale
 
     dim: float = 2.0               # spatial dimension
+    c2: float = 0.025              # intermittency coefficient (must be < c1 /2, ]0,0.5[ in 2D)
     rho_s: float = 1.66            # spatial KE spectrum slope (]0,3[ in 2D; ]0,2[ in 3D)
     gamma_t: float = rho_s         # temporal KE spectrum slope
     c1 = (rho_s - 1) / 2.          # fractal exponent
