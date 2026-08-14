@@ -17,6 +17,8 @@ class SimulationConfig:
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
+    normaliz_fields = True        # Set to False if log-spectrum offset is fitted
+
     # --------- Physical ---------
     Lx: float = 1                  # domain size
     L_LS: float = Lx         # large spatial scale
@@ -235,3 +237,13 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Incorrect dim")
         return xi
+
+    def normalizing(self,V_x, V_y, V_z, stream_z, vort_z):
+        if self.normaliz_fields:
+            ampli = self.K_LS * np.sqrt((stream_z[:]**2).mean()) # warning : create issues
+
+            stream_z /= ampli
+            V_x /= ampli
+            V_y /= ampli
+            V_z /= ampli
+            vort_z /= ampli

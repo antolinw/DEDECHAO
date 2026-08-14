@@ -202,13 +202,7 @@ def velocity_from_stream(stream,epsi,cfg):
         V_z = V[:,:,:,2,:]
 
     # Set amplitude
-    ampli = cfg.K_LS * np.sqrt((stream_z[:]**2).mean()) # warning : create issues
-
-    stream_z /= ampli
-    V_x /= ampli
-    V_y /= ampli
-    V_z /= ampli
-    vort_z /= ampli
+    cfg.normalizing(V_x, V_y, V_z, stream_z, vort_z)
 
     return V_x, V_y, V_z, stream_z, vort_z, epsi
 
