@@ -70,36 +70,6 @@ class Parameters(SimulationConfig):
         self.K_LS = K_LS
 
         np.random.seed(0)
-
-        # Wavenumbers
-        kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
-        if self.dim == 2 :
-            KX, KY = np.meshgrid(kx, kx, indexing="ij")
-            KX = KX[:,:,np.newaxis]
-            KY = KY[:,:,np.newaxis]
-            K = np.sqrt(KX**2 + KY**2)
-            Kv = np.concat((KX, KY), axis= 2)
-            self.KX = KX
-            self.KY = KY
-        elif self.dim == 3 :
-            KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
-            KX = KX[:,:,:,np.newaxis]
-            KY = KY[:,:,:,np.newaxis]
-            KZ = KZ[:,:,:,np.newaxis]
-            K = np.sqrt(KX**2 + KY**2 + KZ**2)
-            Kv = np.concat((KX, KY, KZ), axis= 3)
-            Kv = Kv[:,:,:,:,np.newaxis]
-            self.KX = KX
-            self.KY = KY
-            self.KZ = KZ
-            self.Kv = Kv
-        else:
-            raise ValueError("Incorrect dim")
-
-        # Spectrum
-        S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-        self.cleanAliasing(S1)
-        A = np.sqrt(S1)
         self.N = N
 
         if (self.method == 'Wavelet'): # Wavelet method
@@ -123,6 +93,35 @@ class Parameters(SimulationConfig):
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
+            # Wavenumbers
+            kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
+            if self.dim == 2 :
+                KX, KY = np.meshgrid(kx, kx, indexing="ij")
+                KX = KX[:,:,np.newaxis]
+                KY = KY[:,:,np.newaxis]
+                K = np.sqrt(KX**2 + KY**2)
+                Kv = np.concat((KX, KY), axis= 2)
+                self.KX = KX
+                self.KY = KY
+            elif self.dim == 3 :
+                KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+                KX = KX[:,:,:,np.newaxis]
+                KY = KY[:,:,:,np.newaxis]
+                KZ = KZ[:,:,:,np.newaxis]
+                K = np.sqrt(KX**2 + KY**2 + KZ**2)
+                Kv = np.concat((KX, KY, KZ), axis= 3)
+                Kv = Kv[:,:,:,:,np.newaxis]
+                self.KX = KX
+                self.KY = KY
+                self.KZ = KZ
+                self.Kv = Kv
+            else:
+                raise ValueError("Incorrect dim")
+
+            # Spectrum
+            S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+            self.cleanAliasing(S1)
+            A = np.sqrt(S1)
 
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
