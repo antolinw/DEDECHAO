@@ -17,6 +17,10 @@ class SimulationConfig:
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
+    output_type = 0               # 0 (default) : V_x, V_y, V_z, stream_z, vort_z, epsi
+                                  # 1 : V_x, V_y
+                                  # 2 : stream_z
+
     # --------- Physical ---------
     Lx: float = 1                  # domain size
     L_LS: float = Lx         # large spatial scale
@@ -41,10 +45,12 @@ class SimulationConfig:
 class Parameters(SimulationConfig): 
     def __init__(self):
         super().__init__()
-    
+        if (self.c1 >= 1.0):
+            print("ACHTUNG : c1 >=1.0 i.e the velocity field is diffenrentiable.")
+            print("This is not realistic for turbulence.")
         #Checking core dynamical parameters (2D)
-        if (self.c2 >= self.c1 / 2) or (self.c1 >= 1.0):
-            raise ValueError("Parameters must repect : c2 < c1/2 and c1 < 1.0 for 2D simulations. " \
+        if (self.c2 >= np.sqrt(2*self.dim)) or (self.c2 >= self.c1 / 2) or (self.c1 <= 0.0):
+            raise ValueError("Parameters must repect : c2 < c1/2 and c1 > 0.0 for 2D simulations. " \
                              + "Here : c1 = " + str(self.c1) + " and c2 = " + str(self.c2))
         else:
             print(f"Using consistent parameters: " \
@@ -64,36 +70,6 @@ class Parameters(SimulationConfig):
         self.K_LS = K_LS
 
         np.random.seed(0)
-
-        # Wavenumbers
-        kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
-        if self.dim == 2 :
-            KX, KY = np.meshgrid(kx, kx, indexing="ij")
-            KX = KX[:,:,np.newaxis]
-            KY = KY[:,:,np.newaxis]
-            K = np.sqrt(KX**2 + KY**2)
-            Kv = np.concat((KX, KY), axis= 2)
-            self.KX = KX
-            self.KY = KY
-        elif self.dim == 3 :
-            KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
-            KX = KX[:,:,:,np.newaxis]
-            KY = KY[:,:,:,np.newaxis]
-            KZ = KZ[:,:,:,np.newaxis]
-            K = np.sqrt(KX**2 + KY**2 + KZ**2)
-            Kv = np.concat((KX, KY, KZ), axis= 3)
-            Kv = Kv[:,:,:,:,np.newaxis]
-            self.KX = KX
-            self.KY = KY
-            self.KZ = KZ
-            self.Kv = Kv
-        else:
-            raise ValueError("Incorrect dim")
-
-        # Spectrum
-        S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
-        self.cleanAliasing(S1)
-        A = np.sqrt(S1)
         self.N = N
 
         if (self.method == 'Wavelet'): # Wavelet method
@@ -117,6 +93,35 @@ class Parameters(SimulationConfig):
 
         elif (self.method == 'Fourier'): # Fourier method
             print("Using Fourier method")
+            # Wavenumbers
+            kx = np.fft.fftfreq(N, d=self.dx) * 2 * np.pi
+            if self.dim == 2 :
+                KX, KY = np.meshgrid(kx, kx, indexing="ij")
+                KX = KX[:,:,np.newaxis]
+                KY = KY[:,:,np.newaxis]
+                K = np.sqrt(KX**2 + KY**2)
+                Kv = np.concat((KX, KY), axis= 2)
+                self.KX = KX
+                self.KY = KY
+            elif self.dim == 3 :
+                KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+                KX = KX[:,:,:,np.newaxis]
+                KY = KY[:,:,:,np.newaxis]
+                KZ = KZ[:,:,:,np.newaxis]
+                K = np.sqrt(KX**2 + KY**2 + KZ**2)
+                Kv = np.concat((KX, KY, KZ), axis= 3)
+                Kv = Kv[:,:,:,:,np.newaxis]
+                self.KX = KX
+                self.KY = KY
+                self.KZ = KZ
+                self.Kv = Kv
+            else:
+                raise ValueError("Incorrect dim")
+
+            # Spectrum
+            S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
+            self.cleanAliasing(S1)
+            A = np.sqrt(S1)
 
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
@@ -126,6 +131,10 @@ class Parameters(SimulationConfig):
             np.seterr(divide = 'warn') 
             self.cleanAliasing(S2)
             self.S2 = S2
+
+            self.lepsi_hat =  self.zeroField()
+            self.epsi_t = self.zeroField()
+            self.B_hat = self.zeroField()
         
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
@@ -233,3 +242,13 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Incorrect dim")
         return xi
+
+    def normalizing(self,V_x, V_y, V_z, stream_z, vort_z):
+        if self.normaliz_fields:
+            ampli = self.K_LS * np.sqrt((stream_z[:]**2).mean()) # warning : create issues
+
+            stream_z /= ampli
+            V_x /= ampli
+            V_y /= ampli
+            V_z /= ampli
+            vort_z /= ampli
