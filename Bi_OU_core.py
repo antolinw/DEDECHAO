@@ -10,17 +10,34 @@ def run_simulation(cfg):
     vort_z = cfg.zeroField()
     epsi = cfg.zeroField()
 
-    run_init(cfg)    
-    V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
-        = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+    run_init(cfg)
+
+    match cfg.output_type:
+        case 2:
+            stream_z[0:]\
+                = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+        case 1:
+            V_x[0,:], V_y[0,:]\
+                = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+        case 0:
+            V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
+                = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     for t in range(cfg.N_steps-1):
         run_1step(cfg)
 
-        V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
-            = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+        match cfg.output_type:
+            case 2:
+                stream_z[t+1,:]\
+                    = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+            case 1:
+                V_x[t+1,:], V_y[t+1,:]\
+                    = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
+            case 0:
+                V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
+                            = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
 
-    return V_x, V_y, V_z, stream_z, vort_z, epsi
+    return outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg)
 
 def run_init(cfg):
     cfg.lepsi_hat =  cfg.zeroField()
@@ -81,7 +98,10 @@ def FFT_streamfunction_from_noise(Bepsi_hat,cfg):
 def velocity_from_FFTnoise(Bepsi_hat,epsi,cfg):
     # ---- Streamfunction ----
     stream_hat = FFT_streamfunction_from_noise(Bepsi_hat,cfg)
-    return velocity_from_FFTstream(stream_hat,epsi,cfg)
+    if cfg.output_type == 2:
+        return cfg.IFFT(stream_hat)
+    else:
+        return velocity_from_FFTstream(stream_hat,epsi,cfg)
 
 def velocity_from_FFTstream(stream_hat,epsi,cfg):
     # ---- Velocity ----
@@ -114,5 +134,14 @@ def velocity_from_FFTstream(stream_hat,epsi,cfg):
     # Set amplitude
     cfg.normalizing(V_x, V_y, V_z, stream_z, vort_z)
 
-    return V_x, V_y, V_z, stream_z, vort_z, epsi
+    return outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg)
+
+def outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg):
+    match cfg.output_type:
+        case 2:
+            return stream_z
+        case 1:
+            return V_x, V_y
+        case 0:
+            return V_x, V_y, V_z, stream_z, vort_z, epsi
 

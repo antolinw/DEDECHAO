@@ -17,7 +17,9 @@ class SimulationConfig:
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
-    normaliz_fields = True        # Set to False if log-spectrum offset is fitted
+    output_type = 0               # 0 (default) : V_x, V_y, V_z, stream_z, vort_z, epsi
+                                  # 1 : V_x, V_y
+                                  # 2 : stream_z
 
     # --------- Physical ---------
     Lx: float = 1                  # domain size

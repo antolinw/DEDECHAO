@@ -25,7 +25,13 @@ dt = cfg.Delta_t
 T = cfg.Big_t
 
 if not cfg.wavelet:
-    V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
+    match cfg.output_type:
+        case 2:
+            stream_z = run_simulation(cfg)
+        case 1:
+            V_x, V_y = run_simulation(cfg)
+        case 0:
+            V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
 else:
     V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation_W(cfg)
 
