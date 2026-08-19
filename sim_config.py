@@ -130,6 +130,10 @@ class Parameters(SimulationConfig):
             np.seterr(divide = 'warn') 
             self.cleanAliasing(S2)
             self.S2 = S2
+
+            self.lepsi_hat =  self.zeroField()
+            self.epsi_t = self.zeroField()
+            self.B_hat = self.zeroField()
         
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
