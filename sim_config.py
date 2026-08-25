@@ -20,6 +20,7 @@ class SimulationConfig:
     output_type = 2               # 0 (default) : V_x, V_y, V_z, stream_z, vort_z, epsi
                                   # 1 : V_x, V_y
                                   # 2 : stream_z
+    normaliz_fields = 0        # Set to False if log-spectrum offset is fitted
 
     # --------- Physical ---------
     Lx: float = 1                  # domain size
