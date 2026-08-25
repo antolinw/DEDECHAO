@@ -10,7 +10,7 @@ def run_simulation(cfg):
     vort_z = cfg.zeroField()
     epsi = cfg.zeroField()
 
-    run_init(cfg)
+    GMCrun_init(cfg)
 
     match cfg.output_type:
         case 2:
@@ -24,7 +24,7 @@ def run_simulation(cfg):
                 = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     for t in range(cfg.N_steps-1):
-        run_1step(cfg)
+        GMCrun_1step(cfg)
 
         match cfg.output_type:
             case 2:
@@ -39,7 +39,7 @@ def run_simulation(cfg):
 
     return outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg)
 
-def run_init(cfg):
+def GMCrun_init(cfg):
     cfg.lepsi_hat =  cfg.zeroField()
     cfg.epsi_t = cfg.zeroField()
     cfg.B_hat = cfg.zeroField()
@@ -51,7 +51,7 @@ def run_init(cfg):
     else:
         cfg.B_hat = fftnoise(cfg)
     
-def run_1step(cfg):
+def GMCrun_1step(cfg):
     # ---- OU process for B ----
     if cfg.new_spTimeGMC:
         cfg.B_hat = cfg.exp_B * cfg.B_hat + cfg.noise_B * FFT_CMG_noise(cfg.epsi_t,cfg)
