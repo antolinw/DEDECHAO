@@ -1,4 +1,5 @@
 import numpy as np
+from DEDECHAO.sim_config import Parameters
 
 def run_simulation(cfg):
 
