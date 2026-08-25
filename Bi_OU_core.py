@@ -25,6 +25,7 @@ def run_simulation(cfg):
 
     for t in range(cfg.N_steps-1):
         run_1step(cfg)
+        # toto
 
         match cfg.output_type:
             case 2:
