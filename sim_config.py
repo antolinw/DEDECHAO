@@ -17,7 +17,7 @@ class SimulationConfig:
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
-    output_type = 0               # 0 (default) : V_x, V_y, V_z, stream_z, vort_z, epsi
+    output_type = 2               # 0 (default) : V_x, V_y, V_z, stream_z, vort_z, epsi
                                   # 1 : V_x, V_y
                                   # 2 : stream_z
 
