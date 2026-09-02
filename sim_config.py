@@ -71,7 +71,6 @@ class Parameters(SimulationConfig):
         self.K_LS = K_LS
 
         np.random.seed(0)
-        self.N = N
 
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
@@ -118,11 +117,12 @@ class Parameters(SimulationConfig):
                 self.Kv = Kv
             else:
                 raise ValueError("Incorrect dim")
+            self.K = K
 
             # Spectrum
             S1 = 1 / (1 + (K / K_LS)**2 ) ** (theta_1 / 2)
             self.cleanAliasing(S1)
-            A = np.sqrt(S1)
+            self.A = np.sqrt(S1)
 
             # OU timescales
             tau_B = self.tau_0B * (1 + (K / K_LS)**2 ) ** ( - z/2)
@@ -153,15 +153,13 @@ class Parameters(SimulationConfig):
         noise_e = np.sqrt(1 - exp_e**2)
 
         if self.dim == 3 and not self.wavelet:
-            K = K[:,:,:,:,np.newaxis]
-            A = A[:,:,:,:,np.newaxis]
+            self.K = self.K[:,:,:,:,np.newaxis]
+            self.A = self.A[:,:,:,:,np.newaxis]
             exp_B = exp_B[:,:,:,:,np.newaxis]
             noise_B = noise_B[:,:,:,:,np.newaxis]
 
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
         self.N = N
-        self.K = K
-        self.A = A
         self.exp_B = exp_B
         self.noise_B = noise_B
         self.exp_e = exp_e
