@@ -251,3 +251,12 @@ class Parameters(SimulationConfig):
             V_y /= ampli
             V_z /= ampli
             vort_z /= ampli
+
+    def outputs(self,V_x, V_y, V_z, stream_z, vort_z, epsi):
+        match self.output_type:
+            case 2:
+                return stream_z
+            case 1:
+                return V_x, V_y
+            case 0:
+                return V_x, V_y, V_z, stream_z, vort_z, epsi
