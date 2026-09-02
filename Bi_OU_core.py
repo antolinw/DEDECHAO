@@ -37,7 +37,7 @@ def run_simulation(cfg):
                 V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
                             = CMG_velocity(cfg, intermittency = (not cfg.new_spTimeGMC) )
 
-    return outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg)
+    return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
 
 def run_init(cfg):
     cfg.lepsi_hat =  cfg.zeroField()
@@ -134,14 +134,5 @@ def velocity_from_FFTstream(stream_hat,epsi,cfg):
     # Set amplitude
     cfg.normalizing(V_x, V_y, V_z, stream_z, vort_z)
 
-    return outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg)
-
-def outputs(V_x, V_y, V_z, stream_z, vort_z, epsi, cfg):
-    match cfg.output_type:
-        case 2:
-            return stream_z
-        case 1:
-            return V_x, V_y
-        case 0:
-            return V_x, V_y, V_z, stream_z, vort_z, epsi
+    return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
 

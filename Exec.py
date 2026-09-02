@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kurtosis, skew
 from sim_config import Parameters
-from Bi_OU_core import run_simulation
-from Bi_OU_core_Wavelet import run_simulation_W
 from plot import plot_surface, plot_isotropic_spatial_psd, \
                  save_field_gif_matplotlib, compute_temporal_spectrum, plot_spectrum, \
                  plot_spectrum_mean_std, zeta_n, plot_structure_functions, plot_increment_pdfs, \
@@ -24,16 +22,13 @@ dx = cfg.dx
 dt = cfg.Delta_t
 T = cfg.Big_t
 
-if not cfg.wavelet:
-    match cfg.output_type:
-        case 2:
-            stream_z = run_simulation(cfg)
-        case 1:
-            V_x, V_y = run_simulation(cfg)
-        case 0:
-            V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation(cfg)
-else:
-    V_x, V_y, V_z, stream_z, vort_z, epsi = run_simulation_W(cfg)
+match cfg.output_type:
+    case 2:
+        stream_z = cfg.run_simulation()
+    case 1:
+        V_x, V_y = cfg.run_simulation()
+    case 0:
+        V_x, V_y, V_z, stream_z, vort_z, epsi = cfg.run_simulation()
 
 
 print("Simulation completed. Now plotting results...")
