@@ -21,8 +21,16 @@ def run_simulation_W(cfg):
         B_A, B_D = wavelet_CMG_noise(epsi_t,cfg)
     else:
         B_A, B_D = wavelet_noise(cfg)
-    V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
-            = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+    match cfg.output_type:
+        case 2:
+            stream_z[0:]\
+                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+        case 1:
+            V_x[0,:], V_y[0,:]\
+                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+        case 0:
+            V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
+                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     # -------------------------
     # Time loop
@@ -42,12 +50,22 @@ def run_simulation_W(cfg):
         epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
         # ---- Reconstruction & velocity ----
-        V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
-                    = CMG_velocity_W(
-            B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+        match cfg.output_type:
+            case 2:
+                stream_z[t+1,:]\
+                            = CMG_velocity_W(
+                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+            case 1:
+                V_x[t+1,:], V_y[t+1,:] \
+                            = CMG_velocity_W(
+                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+            case 0:
+                V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
+                            = CMG_velocity_W(
+                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
 
 
-    return V_x, V_y, V_z, stream_z, vort_z, epsi
+    return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
 
 def wavelet_noise(cfg):  
     # White noise in physical space (ensembliste)
@@ -176,7 +194,10 @@ def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
 
 def velocity_from_noise(Bepsi,epsi,cfg):
     stream = coloring_noise(cfg, cfg.E_stream_kj, Bepsi)
-    return velocity_from_stream(stream,epsi,cfg)
+    if cfg.output_type == 2:
+        return stream
+    else:
+        return velocity_from_stream(stream,epsi,cfg)
 
 def velocity_from_stream(stream,epsi,cfg):
     # ---- Velocity ----
@@ -204,5 +225,5 @@ def velocity_from_stream(stream,epsi,cfg):
     # Set amplitude
     cfg.normalizing(V_x, V_y, V_z, stream_z, vort_z)
 
-    return V_x, V_y, V_z, stream_z, vort_z, epsi
+    return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
 

@@ -2,6 +2,8 @@
 import numpy as np
 from dataclasses import dataclass
 from pytorch_wavelets import DWTForward, DWTInverse
+from Bi_OU_core import run_simulation
+from Bi_OU_core_Wavelet import run_simulation_W
 
 @dataclass
 class SimulationConfig:
@@ -260,3 +262,9 @@ class Parameters(SimulationConfig):
                 return V_x, V_y
             case 0:
                 return V_x, V_y, V_z, stream_z, vort_z, epsi
+
+    def run_simulation(self):
+        if not self.wavelet:
+            return run_simulation(self)
+        else:
+            return run_simulation_W(self)
