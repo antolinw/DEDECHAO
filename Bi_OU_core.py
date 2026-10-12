@@ -82,7 +82,7 @@ def CMG_velocity(cfg, intermittency = True):
 def epsilon(lepsi_hat,cfg):
     lepsi_real = cfg.IFFT(lepsi_hat)
     if cfg.dim == 3:
-        lepsi_real = lepsi_real[:,:,:,:,np.newaxis]
+        lepsi_real = lepsi_real[:,:,:,np.newaxis,:]
     return cfg.intermittency(lepsi_real) 
 
 def FFT_CMG_from_noise(B_real,epsi,cfg, intermittency = True):

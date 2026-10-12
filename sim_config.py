@@ -2,6 +2,7 @@
 import numpy as np
 from dataclasses import dataclass
 from pytorch_wavelets import DWTForward, DWTInverse
+from wavelet_nd import DWTForwardND, DWTInverseND
 from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 
@@ -60,6 +61,7 @@ class Parameters(SimulationConfig):
                   + f"dim = {self.dim}, c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
+        self.N = N
         self.PN = N//2                                 # aliased wavevector index
         self.dx = self.Lx / N
 
@@ -77,15 +79,21 @@ class Parameters(SimulationConfig):
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = np.log2(N)
-            self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
-            self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            if self.dim == 2:
+                self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            elif self.dim == 3: # pytorch_wavelets has no 3D transform
+                self.dwt = DWTForwardND(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
+            else:
+                raise ValueError("Incorrect dim")
             if self.J > self.Jmax:
                 raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
             
             # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
-            self.k_j = K_Lx * (2.0 ** self.j)
+            self.k_j = K_Lx * (2.0 ** (self.J - 1 - self.j))  # characteristic wavenumber of each wavelet scale 
 
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
@@ -161,7 +169,6 @@ class Parameters(SimulationConfig):
             noise_B = noise_B[:,:,:,:,np.newaxis]
 
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
-        self.N = N
         self.exp_B = exp_B
         self.noise_B = noise_B
         self.exp_e = exp_e

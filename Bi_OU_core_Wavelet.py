@@ -15,7 +15,7 @@ def run_simulation_W(cfg):
     # -------------------------
     # Initialization
     # -------------------------
-    lepsi_A, lepsi_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj)
+    lepsi_A, lepsi_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
     epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
     if cfg.new_spTimeGMC:
         B_A, B_D = wavelet_CMG_noise(epsi_t,cfg)
@@ -45,7 +45,7 @@ def run_simulation_W(cfg):
         B_D = wavelet_ou_update(B_D, cfg.exp_B, cfg.noise_B, noise_B_D)
 
         # ---- OU process for log-epsilon ----
-        _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj)
+        _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
         lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
         epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
@@ -67,9 +67,28 @@ def run_simulation_W(cfg):
 
     return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
 
-def wavelet_noise(cfg):  
+def to_dwt_format(field, cfg):
+    # default format (N, N, n_ens), (N, N, N, n_ens) or (N, N, N, C, n_ens)
+    # -> torch format (n_ens, C, N, N) or (n_ens, C, N, N, N) for DWT
+    if field.ndim == cfg.dim + 1: # scalar field
+        field = field[..., np.newaxis, :]
+    field = np.moveaxis(field, [-1, -2], [0, 1])
+    return torch.tensor(field, dtype=torch.float32)
+
+def from_dwt_format(field, cfg):
+    # inverse of to_dwt_format (the component axis is removed for scalar fields)
+    field = field.cpu().numpy()
+    field = np.moveaxis(field, [0, 1], [-1, -2])
+    if field.shape[-2] == 1:
+        field = field[..., 0, :]
+    return field
+
+def wavelet_noise(cfg, scalar = False):  
     # White noise in physical space (ensembliste)
-    noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
+    if cfg.dim == 2:
+        noise = torch.randn(cfg.n_ens, 1, cfg.N, cfg.N) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
+    else: # scalar or vectorial (3 components) noise
+        noise = torch.randn(cfg.n_ens, 1 if scalar else 3, cfg.N, cfg.N, cfg.N)
     A, D = cfg.dwt(noise)
     # Zero mean (eg B_hat[0, 0] = 0)
     A.zero_()
@@ -82,9 +101,7 @@ def wavelet_CMG_noise(epsi,cfg):
 def wavelet_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
     Bepsi = cfg.CMG_from_noise(B_real,epsi, intermittency) # default format (cfg.N, cfg.N, cfg.n_ens)
 
-    Bepsi = np.moveaxis(Bepsi[np.newaxis,:], -1, 0) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
-    Bepsi = torch.tensor(Bepsi,dtype=torch.float32) # torch for DWT
-    A, D = cfg.dwt(Bepsi)
+    A, D = cfg.dwt(to_dwt_format(Bepsi, cfg))
     # Zero mean (eg B_hat[0, 0] = 0)
     A.zero_()
 
@@ -95,9 +112,7 @@ def wavelet_CMG_from_noise(B_real,epsi,cfg, intermittency = True):
 #     return reconstruct_field(A, D, cfg)
 
 def coloring_noise(cfg, spectrum, noise):
-    noise = np.moveaxis(noise[np.newaxis,:], -1, 0) # format (cfg.n_ens, 1, cfg.N, cfg.N) for DWT
-    noise = torch.tensor(noise,dtype=torch.float32) # torch for DWT
-    A,D = cfg.dwt(noise)
+    A,D = cfg.dwt(to_dwt_format(noise, cfg))
     A.zero_()
     # ---- Streamfunction ----
     A, D = wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
@@ -106,13 +121,13 @@ def coloring_noise(cfg, spectrum, noise):
 def spectrum_model_scale(j, alpha, beta):
     return 2.0 ** (alpha * j + beta)
 
-def wavelet_colored_noise(cfg, spectrum):  
+def wavelet_colored_noise(cfg, spectrum, scalar = False):  
     """
     Generate colored Gaussian noise directly in wavelet space
     with a prescribed scale-dependent spectrum.
     """
 
-    A, D = wavelet_noise(cfg)
+    A, D = wavelet_noise(cfg, scalar)
 
     return  wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
 
@@ -122,13 +137,13 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
     with a prescribed scale-dependent spectrum
     and presribed noise
     """
+    d = int(cfg.dim)
+    n_sub = 2 ** d - 1 # number of detail subbands per scale (3 in 2D, 7 in 3D)
+    # Fine -> coarse indexing
     for j in range(cfg.J):
-        # Fine -> coarse indexing
-        Dj = D[cfg.J - 1 - j]
-
         # Number of wavelet coefficients at scale j
-        npx = 2 ** j
-        Nj = 3 * (npx ** 2)
+        npx = 2 ** (cfg.J - 1 - j)
+        Nj = n_sub * (npx ** d)
 
         # Characteristic wavenumber
         kappa_j = cfg.k_j[j]
@@ -137,11 +152,12 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
         Ej = spectrum[j]
 
         # Energy per coefficient (Talla's magic coefficient)
-        coef_s = kappa_j * (3.0 / 4.0) / Nj
+        # (n_sub / 2^d = fraction of the dyadic band [k_j, 2 k_j]^d covered by the details)
+        coef_s = kappa_j * (n_sub / 2 ** d) / Nj
         scale_factor = np.sqrt(coef_s * Ej)
 
         # Apply scaling (broadcasted over ensemble + subbands)
-        D[cfg.J - 1 - j] = scale_factor * Dj
+        D[j] *= scale_factor
 
     A.zero_()
     return A, D
@@ -169,6 +185,7 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
     J = len(D)
     D_new = []
 
+    # Fine -> coarse indexing
     for j in range(J):
         D_new.append(
             exp_j[j] * D[j] + noise_j[j] * noise_D[j]
@@ -178,13 +195,13 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
 
 ###CMG velocity decomposed in 4 parts:
 def reconstruct_field(B_A, B_D, cfg):
-    B = cfg.idwt((B_A, B_D))[:, 0]        # (ens, N, N)
-    B = B.cpu().numpy()
-    B = np.moveaxis(B, 0, -1)
-    return B
+    B = cfg.idwt((B_A, B_D))        # (ens, C, N, N) or (ens, C, N, N, N)
+    return from_dwt_format(B, cfg)  # (N, N, ens), (N, N, N, ens) or (N, N, N, C, ens)
 
 def epsilon(lepsi_A, lepsi_D,cfg):
     lepsi = reconstruct_field(lepsi_A, lepsi_D, cfg)
+    if cfg.dim == 3: # scalar factor broadcasted over the 3 components
+        lepsi = lepsi[:,:,:,np.newaxis,:]
     return cfg.intermittency(lepsi) 
 
 def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
