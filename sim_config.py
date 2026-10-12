@@ -61,6 +61,7 @@ class Parameters(SimulationConfig):
                   + f"dim = {self.dim}, c1 = {self.c1}, c2 = {self.c2}, rho_s = {self.rho_s}, gamma_t = {self.gamma_t}")
 
         N = 2 ** self.n_order
+        self.N = N
         self.PN = N//2                                 # aliased wavevector index
         self.dx = self.Lx / N
 
@@ -168,7 +169,6 @@ class Parameters(SimulationConfig):
             noise_B = noise_B[:,:,:,:,np.newaxis]
 
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
-        self.N = N
         self.exp_B = exp_B
         self.noise_B = noise_B
         self.exp_e = exp_e

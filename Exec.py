@@ -43,6 +43,7 @@ if dim == 3: # take a slice a z = 0
    V_y = V_y[:,:,:,0,:]
    V_z = V_z[:,:,:,0,:]
    vort_z = vort_z[:,:,:,0,:]
+   epsi = epsi[:,:,:,0,:]
 
 ### 2D + 3D instant plots :
 #plot_surface(stream_z[0,:,:,0], title="stream_z at t=0")
