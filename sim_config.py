@@ -2,6 +2,7 @@
 import numpy as np
 from dataclasses import dataclass
 from pytorch_wavelets import DWTForward, DWTInverse
+from wavelet_nd import DWTForwardND, DWTInverseND
 from Bi_OU_core import run_simulation
 from Bi_OU_core_Wavelet import run_simulation_W
 
@@ -77,8 +78,14 @@ class Parameters(SimulationConfig):
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = np.log2(N)
-            self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
-            self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            if self.dim == 2:
+                self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            elif self.dim == 3: # pytorch_wavelets has no 3D transform
+                self.dwt = DWTForwardND(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
+            else:
+                raise ValueError("Incorrect dim")
             if self.J > self.Jmax:
                 raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
             
