@@ -93,7 +93,7 @@ class Parameters(SimulationConfig):
             # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
-            self.k_j = K_Lx * (2.0 ** self.j)
+            self.k_j = K_Lx * (2.0 ** (self.J - 1 - self.j))  # characteristic wavenumber of each wavelet scale 
 
             # ---------- OU time scales per scales ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)

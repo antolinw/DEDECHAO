@@ -139,12 +139,10 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
     """
     d = int(cfg.dim)
     n_sub = 2 ** d - 1 # number of detail subbands per scale (3 in 2D, 7 in 3D)
+    # Fine -> coarse indexing
     for j in range(cfg.J):
-        # Fine -> coarse indexing
-        Dj = D[cfg.J - 1 - j]
-
         # Number of wavelet coefficients at scale j
-        npx = 2 ** j
+        npx = 2 ** (cfg.J - 1 - j)
         Nj = n_sub * (npx ** d)
 
         # Characteristic wavenumber
@@ -159,7 +157,7 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
         scale_factor = np.sqrt(coef_s * Ej)
 
         # Apply scaling (broadcasted over ensemble + subbands)
-        D[cfg.J - 1 - j] = scale_factor * Dj
+        D[j] *= scale_factor
 
     A.zero_()
     return A, D
@@ -187,6 +185,7 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
     J = len(D)
     D_new = []
 
+    # Fine -> coarse indexing
     for j in range(J):
         D_new.append(
             exp_j[j] * D[j] + noise_j[j] * noise_D[j]
