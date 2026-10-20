@@ -46,7 +46,7 @@ def run_simulation_W(cfg):
 
         # ---- OU process for log-epsilon ----
         _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
-        lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
+        lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_B, cfg.noise_B, noise_e_D)
         epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
         # ---- Reconstruction & velocity ----

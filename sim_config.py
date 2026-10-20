@@ -38,8 +38,6 @@ class SimulationConfig:
     D3 = 1
     T_LS: float = L_LS / D3
     tau_0B: float = T_LS
-    # tau_0e_factor: float = np.inf # steady intermittency
-    tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
     # --------- Matérn parameters ---------
@@ -150,17 +148,14 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
-        tau_e = self.tau_0e_factor * tau_B
-        self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+        self.Delta_t = tau_B.min() * 0.5
         tau_B_filtered = tau_B[~np.isinf(tau_B)]
         self.Big_t = np.max(tau_B_filtered) * 0.5
-        print('my two small times are: ', tau_B.min() * 0.5, tau_e.min() * 0.5)
+        print('my small times is: ', tau_B.min() * 0.5)
         print("The time step is : dt = " + str(self.Delta_t))
 
         exp_B = np.exp(-self.Delta_t / tau_B)
         noise_B = np.sqrt(1 - exp_B**2)
-        exp_e = np.exp(-self.Delta_t / tau_e)
-        noise_e = np.sqrt(1 - exp_e**2)
 
         if self.dim == 3 and not self.wavelet:
             self.K = self.K[:,:,:,:,np.newaxis]
@@ -171,8 +166,6 @@ class Parameters(SimulationConfig):
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
         self.exp_B = exp_B
         self.noise_B = noise_B
-        self.exp_e = exp_e
-        self.noise_e = noise_e
 
 
     def intermittency(self,lepsi_real, intermittency = True):
