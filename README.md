@@ -1,7 +1,7 @@
 
 # DEDECHAO
 
-DEDECHAO is a Python framework for generating spatial and temporal fractal and multifractal fields based on Gaussian Multiplicative Chaos (GMC), with temporal dynamics driven by Ornstein–Uhlenbeck processes. It is particularly suited to modeling intermittent isotropic turbulence.
+DEDECHAO is a Python framework for generating spatial and temporal fractal and multifractal fields based on Gaussian Multiplicative Chaos (GMC), with temporal dynamics driven by Ornstein–Uhlenbeck processes (one Ornstein–Uhlenbeck by spatial scale). It is particularly suited to modeling intermittent isotropic turbulence.
 
 ## Features
 
@@ -29,7 +29,9 @@ The framework combines Gaussian Multiplicative Chaos for spatial multifractal co
 
 ## Citation
 
-If you use DEDECHAO in your research, please cite this repository and any associated publications.
+If you use DEDECHAO in your research, please cite this repository and the following publication
+
+Ruffenach, Wandrille, and Laurent Chevillard. "The spatio-temporal statistical structure of the turbulent dissipation field and its stochastic representation as a Gaussian multiplicative chaos." Comptes Rendus. Physique 27.G1 (2026): 275-305.
 
 ## License
 
