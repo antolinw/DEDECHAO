@@ -16,7 +16,6 @@ class SimulationConfig:
     method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave: str = 'db4'             # choice of the wavelet
     J: int = n_order                    # Number of level of decomposition for wavelet method
-    beta: float = 1.              # Energy injected in wavelet spectrum
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 

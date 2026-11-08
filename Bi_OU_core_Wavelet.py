@@ -118,9 +118,6 @@ def coloring_noise(cfg, spectrum, noise):
     A, D = wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
     return reconstruct_field(A, D, cfg)
 
-def spectrum_model_scale(j, alpha, beta):
-    return 2.0 ** (alpha * j + beta)
-
 def wavelet_colored_noise(cfg, spectrum, scalar = False):  
     """
     Generate colored Gaussian noise directly in wavelet space
