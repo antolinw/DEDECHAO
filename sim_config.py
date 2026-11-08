@@ -91,6 +91,10 @@ class Parameters(SimulationConfig):
             if self.L_LS > LS_max:
                 print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
                 raise ValueError("You should decrease LS to " + str(LS_max))
+            if self.rho_s > 2*self.wave_n_wm + 1:
+                raise ValueError(f"ACHTUNG : rho_s > 2*{self.wave_n_wm} + 1 \
+                    i.e. the wavelet {self.wave} has not enough vanishing moments \
+                    for the requested spatial spectrum slope rho_s={self.rho_s}.")
             
             # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
