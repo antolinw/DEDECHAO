@@ -77,7 +77,9 @@ class Parameters(SimulationConfig):
 
         if (self.method == 'Wavelet'): # Wavelet method
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
-            self.Jmax = self.n_order
+            self.Jmax = self.n_order - np.log2(self.wave_n_wm)
+            self.Jmax = int(np.floor( self.Jmax))
+            LS_max = 2**self.Jmax * self.dx
             if self.dim == 2:
                 self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
                 self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
@@ -86,8 +88,9 @@ class Parameters(SimulationConfig):
                 self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
             else:
                 raise ValueError("Incorrect dim")
-            if self.J > self.Jmax:
-                raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
+            if self.L_LS > LS_max:
+                print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
+                raise ValueError("You should decrease LS to " + str(LS_max))
             
             # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
