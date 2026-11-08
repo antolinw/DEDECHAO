@@ -1,5 +1,6 @@
 # config.py
 import numpy as np
+import torch
 from dataclasses import dataclass
 from pytorch_wavelets import DWTForward, DWTInverse
 from wavelet_nd import DWTForwardND, DWTInverseND
@@ -71,6 +72,7 @@ class Parameters(SimulationConfig):
         # i.e. theta_1 = rho_s + 2 + self.dim-1        
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
+        self.K_Lx = K_Lx
         self.K_LS = K_LS
 
         np.random.seed(0)
@@ -99,9 +101,16 @@ class Parameters(SimulationConfig):
             # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
-            self.k_j = K_Lx * (2.0 ** (self.n_order - 1 - self.j))  # dyadic wavenumber of each wavelet scale
+            self.k_dyad = K_Lx * (2.0 ** (self.n_order - 1 - self.j))  # dyadic wavenumber of each wavelet scale
+            # Number of high-pass directions of each detail subband (binary code b = 1 .. 2^d - 1)
+            # 2D : [1, 1, 2] (H, V, D) ; 3D : [1, 1, 2, 1, 2, 2, 3] (aad, ada, add, daa, dad, dda, ddd)
+            self.n_hp = np.array([bin(b).count('1') for b in range(1, 2 ** int(self.dim))])
+            # Characteristic wavenumber of each subband : (J, n_sub), diagonal subbands at sqrt(n_hp) * k_dyad
+            self.k_j = self.k_dyad[:, np.newaxis] * np.sqrt(self.n_hp)[np.newaxis, :]
+            # ---------- OU time scales per scales and subbands ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
 
+            # Omnidirectional spectra per scales and subbands : (J, n_sub)
             self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
             self.E_stream_kj = (1 + (self.k_j / K_LS)**2) ** (-rho_streamfct/2) 
 
@@ -168,11 +177,20 @@ class Parameters(SimulationConfig):
             self.A = self.A[:,:,:,:,np.newaxis]
             exp_B = exp_B[:,:,:,:,np.newaxis]
             noise_B = noise_B[:,:,:,:,np.newaxis]
+        if self.wavelet:
+            exp_B = self.to_subbands(exp_B)
+            noise_B = self.to_subbands(noise_B)
 
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
         self.exp_B = exp_B
         self.noise_B = noise_B
 
+
+    def to_subbands(self, x):
+        # (J, n_sub) array -> torch tensor (J, n_sub, 1, ..., 1)
+        # so that x[j] broadcasts on the details D[j] : (n_ens, C, n_sub, n_1, ..., n_d)
+        x = np.asarray(x)
+        return torch.tensor(x, dtype=torch.float32).reshape(x.shape + (1,) * int(self.dim))
 
     def intermittency(self,lepsi_real, intermittency = True):
         if intermittency:
