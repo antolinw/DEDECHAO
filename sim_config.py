@@ -15,7 +15,7 @@ class SimulationConfig:
     # method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
     wave_base: str = 'db'         # choice of the base wavelet
-    wave_n_wm : int = 4            # number of vanishing moments of the wavelet 
+    wave_n_wm : int = 8            # number of vanishing moments of the wavelet 
     J: int = n_order                    # Number of level of decomposition for wavelet method
     wave: str = wave_base + str(wave_n_wm)
     mode: str = 'periodization'
