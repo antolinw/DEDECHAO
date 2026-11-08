@@ -14,8 +14,10 @@ class SimulationConfig:
     n_ens: int = 1                # ensemble size
     # method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
-    wave: str = 'db4'             # choice of the wavelet
+    wave_base: str = 'db'         # choice of the base wavelet
+    wave_n_wm : int = 4            # number of vanishing moments of the wavelet 
     J: int = n_order                    # Number of level of decomposition for wavelet method
+    wave: str = wave_base + str(wave_n_wm)
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
