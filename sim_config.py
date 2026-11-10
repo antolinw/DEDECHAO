@@ -78,18 +78,9 @@ class Parameters(SimulationConfig):
         np.random.seed(0)
 
         if (self.method == 'Wavelet'): # Wavelet method
-            print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
             self.Jmax = self.n_order - np.log2(self.wave_n_wm)
             self.Jmax = int(np.floor( self.Jmax))
             LS_max = 2**self.Jmax * self.dx
-            if self.dim == 2:
-                self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
-                self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
-            elif self.dim == 3: # pytorch_wavelets has no 3D transform
-                self.dwt = DWTForwardND(J=self.J, wave=self.wave, mode=self.mode)
-                self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
-            else:
-                raise ValueError("Incorrect dim")
             if self.L_LS > LS_max:
                 print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
                 raise ValueError("You should decrease LS to " + str(LS_max))
@@ -98,7 +89,15 @@ class Parameters(SimulationConfig):
                     i.e. the wavelet {self.wave} has not enough vanishing moments \
                     for the requested spatial spectrum slope rho_s={self.rho_s}.")
             
-            # j = np.arange(1, self.J + 1)
+            print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
+            if self.dim == 2:
+                self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
+            elif self.dim == 3: # pytorch_wavelets has no 3D transform
+                self.dwt = DWTForwardND(J=self.J, wave=self.wave, mode=self.mode)
+                self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
+            else:
+                raise ValueError("Incorrect dim")
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
             self.k_dyad = K_Lx * (2.0 ** (self.n_order - 1 - self.j))  # dyadic wavenumber of each wavelet scale
