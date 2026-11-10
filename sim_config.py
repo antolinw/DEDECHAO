@@ -86,6 +86,16 @@ class Parameters(SimulationConfig):
             if J_LS > Jmax:
                 print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
                 raise ValueError("You should decrease LS to " + str(LS_max))
+            LS_J = 2**self.J * self.dx
+            if self.J > J_LS:
+                print("ACHTUNG : Requested J (" + str(self.J) + ") exceeds the largest physical scale !!!")
+                print("Wavelet-based fractal structure is not garanted for the largest scales.")
+                print("J is set to Jmax = " + str(Jmax))
+                self.J = J_LS
+            if self.J < J_LS:
+                print("ACHTUNG : Requested J is too small to reach the largest scale L_LS !!!")
+                # self.J = np.log2(self.L_LS / self.dx)
+                # self.J = int(np.floor( self.J))
             if self.rho_s > 2*self.wave_n_wm + 1:
                 raise ValueError(f"ACHTUNG : rho_s > 2*{self.wave_n_wm} + 1 \
                     i.e. the wavelet {self.wave} has not enough vanishing moments \
