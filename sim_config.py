@@ -78,10 +78,12 @@ class Parameters(SimulationConfig):
         np.random.seed(0)
 
         if (self.method == 'Wavelet'): # Wavelet method
-            self.Jmax = self.n_order - np.log2(self.wave_n_wm)
-            self.Jmax = int(np.floor( self.Jmax))
-            LS_max = 2**self.Jmax * self.dx
-            if self.L_LS > LS_max:
+            Jmax = self.n_order - np.log2(self.wave_n_wm)
+            Jmax = int(np.floor( Jmax))
+            J_LS = np.log2(self.L_LS / self.dx)
+            J_LS = int(np.floor( J_LS))
+            LS_max = 2**Jmax * self.dx
+            if J_LS > Jmax:
                 print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
                 raise ValueError("You should decrease LS to " + str(LS_max))
             if self.rho_s > 2*self.wave_n_wm + 1:
