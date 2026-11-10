@@ -46,7 +46,7 @@ def run_simulation_W(cfg):
 
         # ---- OU process for log-epsilon ----
         _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
-        lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_e, cfg.noise_e, noise_e_D)
+        lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_B, cfg.noise_B, noise_e_D)
         epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
 
         # ---- Reconstruction & velocity ----
@@ -118,9 +118,6 @@ def coloring_noise(cfg, spectrum, noise):
     A, D = wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D)
     return reconstruct_field(A, D, cfg)
 
-def spectrum_model_scale(j, alpha, beta):
-    return 2.0 ** (alpha * j + beta)
-
 def wavelet_colored_noise(cfg, spectrum, scalar = False):  
     """
     Generate colored Gaussian noise directly in wavelet space
@@ -138,26 +135,17 @@ def wavelet_colored_noise_from_wavelet_noise(cfg, spectrum, A, D):
     and presribed noise
     """
     d = int(cfg.dim)
-    n_sub = 2 ** d - 1 # number of detail subbands per scale (3 in 2D, 7 in 3D)
+    # Energy per coefficient (Talla's magic coefficient), for each scale j and subband s : (J, n_sub)
+    # = d-dimensional spectrum E(k) / k^(d-1) at the subband wavenumber k_js, times the Fourier volume
+    #   (K_Lx / 2)^d of a coefficient. For an axis-aligned subband (k_js = k_j) it reduces to
+    #   kappa_j * (n_sub / 2^d) / Nj, with Nj = n_sub * npx^d coefficients at scale j and npx = k_j / K_Lx.
+    coef_s = (cfg.K_Lx / 2) ** d * cfg.k_j ** (1 - d)
+    scale_factor = cfg.to_subbands(np.sqrt(coef_s * spectrum))
+
     # Fine -> coarse indexing
     for j in range(cfg.J):
-        # Number of wavelet coefficients at scale j
-        npx = 2 ** (cfg.J - 1 - j)
-        Nj = n_sub * (npx ** d)
-
-        # Characteristic wavenumber
-        kappa_j = cfg.k_j[j]
-
-        # Target energy at scale j
-        Ej = spectrum[j]
-
-        # Energy per coefficient (Talla's magic coefficient)
-        # (n_sub / 2^d = fraction of the dyadic band [k_j, 2 k_j]^d covered by the details)
-        coef_s = kappa_j * (n_sub / 2 ** d) / Nj
-        scale_factor = np.sqrt(coef_s * Ej)
-
-        # Apply scaling (broadcasted over ensemble + subbands)
-        D[j] *= scale_factor
+        # Apply scaling (subband-dependent, broadcasted over ensemble + components + positions)
+        D[j] *= scale_factor[j]
 
     A.zero_()
     return A, D
@@ -170,10 +158,10 @@ def wavelet_ou_update(D, exp_j, noise_j, noise_D):
     ----------
     D : list of torch.Tensor
         Wavelet detail coefficients [D_1, ..., D_J]
-    exp_j : array-like
-        exp(-dt / tau_j) for each scale j
-    noise_j : array-like
-        sqrt(1 - exp_j^2) for each scale j
+    exp_j : torch.Tensor (J, n_sub, 1, ..., 1)
+        exp(-dt / tau_js) for each scale j and subband s
+    noise_j : torch.Tensor (J, n_sub, 1, ..., 1)
+        sqrt(1 - exp_j^2) for each scale j and subband s
     noise_D : list of torch.Tensor
         White wavelet noise coefficients (same structure as D)
 

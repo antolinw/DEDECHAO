@@ -58,7 +58,7 @@ def run_1step(cfg):
     else:
         cfg.B_hat = cfg.exp_B * cfg.B_hat + cfg.noise_B * fftnoise(cfg)
     # ---- OU process for epsilon ----
-    cfg.lepsi_hat = cfg.exp_e  * cfg.lepsi_hat + cfg.noise_e * np.sqrt(cfg.S2) * fftnoise(cfg, scalar = True)
+    cfg.lepsi_hat = cfg.exp_B  * cfg.lepsi_hat + cfg.noise_B * np.sqrt(cfg.S2) * fftnoise(cfg, scalar = True)
     cfg.epsi_t = epsilon(cfg.lepsi_hat,cfg)
 
 

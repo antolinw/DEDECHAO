@@ -1,5 +1,6 @@
 # config.py
 import numpy as np
+import torch
 from dataclasses import dataclass
 from pytorch_wavelets import DWTForward, DWTInverse
 from wavelet_nd import DWTForwardND, DWTInverseND
@@ -14,9 +15,10 @@ class SimulationConfig:
     n_ens: int = 1                # ensemble size
     # method: str = 'Wavelet'       # Choice of method :'Fourier' or 'Wavelet'
     method: str = 'Fourier'       # Choice of method :'Fourier' or 'Wavelet'
-    wave: str = 'db4'             # choice of the wavelet
+    wave_base: str = 'db'         # choice of the base wavelet
+    wave_n_wm : int = 8            # number of vanishing moments of the wavelet 
     J: int = n_order                    # Number of level of decomposition for wavelet method
-    beta: float = 1.              # Energy injected in wavelet spectrum
+    wave: str = wave_base + str(wave_n_wm)
     mode: str = 'periodization'
     new_spTimeGMC = True          # Wandrille's method for spatiotemporal GMC
 
@@ -38,8 +40,6 @@ class SimulationConfig:
     D3 = 1
     T_LS: float = L_LS / D3
     tau_0B: float = T_LS
-    # tau_0e_factor: float = np.inf # steady intermittency
-    tau_0e_factor: float = 1.0  # unsteady intermittency
     z_eps: float = 1.0
 
     # --------- Matérn parameters ---------
@@ -72,13 +72,36 @@ class Parameters(SimulationConfig):
         # i.e. theta_1 = rho_s + 2 + self.dim-1        
         K_Lx = 2 * np.pi / self.Lx                     # largest-scale wavenumber
         K_LS = 2 * np.pi / self.L_LS                   # large-scale wavenumber
+        self.K_Lx = K_Lx
         self.K_LS = K_LS
 
         np.random.seed(0)
 
         if (self.method == 'Wavelet'): # Wavelet method
+            Jmax = self.n_order - np.log2(self.wave_n_wm)
+            Jmax = int(np.floor( Jmax))
+            J_LS = np.log2(self.L_LS / self.dx)
+            J_LS = int(np.floor( J_LS))
+            LS_max = 2**Jmax * self.dx
+            if J_LS > Jmax:
+                print("ACHTUNG : Requested L_LS exceeds maximum wavelet scale !!!")
+                raise ValueError("You should decrease LS to " + str(LS_max))
+            LS_J = 2**self.J * self.dx
+            if self.J > J_LS:
+                print("ACHTUNG : Requested J (" + str(self.J) + ") exceeds the largest physical scale !!!")
+                print("Wavelet-based fractal structure is not garanted for the largest scales.")
+                print("J is set to Jmax = " + str(Jmax))
+                self.J = J_LS
+            if self.J < J_LS:
+                print("ACHTUNG : Requested J is too small to reach the largest scale L_LS !!!")
+                # self.J = np.log2(self.L_LS / self.dx)
+                # self.J = int(np.floor( self.J))
+            if self.rho_s > 2*self.wave_n_wm + 1:
+                raise ValueError(f"ACHTUNG : rho_s > 2*{self.wave_n_wm} + 1 \
+                    i.e. the wavelet {self.wave} has not enough vanishing moments \
+                    for the requested spatial spectrum slope rho_s={self.rho_s}.")
+            
             print(f"Using wavelet method with wavelet {self.wave} and J={self.J}")
-            self.Jmax = np.log2(N)
             if self.dim == 2:
                 self.dwt = DWTForward(J=self.J, wave=self.wave, mode=self.mode)
                 self.idwt = DWTInverse(wave=self.wave, mode=self.mode)
@@ -87,17 +110,18 @@ class Parameters(SimulationConfig):
                 self.idwt = DWTInverseND(wave=self.wave, mode=self.mode)
             else:
                 raise ValueError("Incorrect dim")
-            if self.J > self.Jmax:
-                raise ValueError("ACHTUNG : Requested J exceeds maximum wavelet scale !!!")
-            
-            # j = np.arange(1, self.J + 1)
             # Wavelet characteristic wavenumbers
             self.j = np.arange(self.J)
-            self.k_j = K_Lx * (2.0 ** (self.J - 1 - self.j))  # characteristic wavenumber of each wavelet scale 
-
-            # ---------- OU time scales per scales ----------
+            self.k_dyad = K_Lx * (2.0 ** (self.n_order - 1 - self.j))  # dyadic wavenumber of each wavelet scale
+            # Number of high-pass directions of each detail subband (binary code b = 1 .. 2^d - 1)
+            # 2D : [1, 1, 2] (H, V, D) ; 3D : [1, 1, 2, 1, 2, 2, 3] (aad, ada, add, daa, dad, dda, ddd)
+            self.n_hp = np.array([bin(b).count('1') for b in range(1, 2 ** int(self.dim))])
+            # Characteristic wavenumber of each subband : (J, n_sub), diagonal subbands at sqrt(n_hp) * k_dyad
+            self.k_j = self.k_dyad[:, np.newaxis] * np.sqrt(self.n_hp)[np.newaxis, :]
+            # ---------- OU time scales per scales and subbands ----------
             tau_B = self.tau_0B * (1 + (self.k_j / K_LS)**2) ** (-z / 2)
 
+            # Omnidirectional spectra per scales and subbands : (J, n_sub)
             self.E_epsi_kj = ( self.k_j / K_Lx ) ** (-1) 
             self.E_stream_kj = (1 + (self.k_j / K_LS)**2) ** (-rho_streamfct/2) 
 
@@ -150,30 +174,34 @@ class Parameters(SimulationConfig):
         else:
             raise ValueError("Invalid method. Choose 'Fourier' or 'Wavelet'.")
 
-        tau_e = self.tau_0e_factor * tau_B
-        self.Delta_t = min(tau_B.min(), tau_e.min()) * 0.5
+        self.Delta_t = tau_B.min() * 0.5
         tau_B_filtered = tau_B[~np.isinf(tau_B)]
         self.Big_t = np.max(tau_B_filtered) * 0.5
-        print('my two small times are: ', tau_B.min() * 0.5, tau_e.min() * 0.5)
+        print('my small times is: ', tau_B.min() * 0.5)
         print("The time step is : dt = " + str(self.Delta_t))
 
         exp_B = np.exp(-self.Delta_t / tau_B)
         noise_B = np.sqrt(1 - exp_B**2)
-        exp_e = np.exp(-self.Delta_t / tau_e)
-        noise_e = np.sqrt(1 - exp_e**2)
 
         if self.dim == 3 and not self.wavelet:
             self.K = self.K[:,:,:,:,np.newaxis]
             self.A = self.A[:,:,:,:,np.newaxis]
             exp_B = exp_B[:,:,:,:,np.newaxis]
             noise_B = noise_B[:,:,:,:,np.newaxis]
+        if self.wavelet:
+            exp_B = self.to_subbands(exp_B)
+            noise_B = self.to_subbands(noise_B)
 
         self.c2_eff = self.c2 * np.log( self.L_LS / (self.dx) )
         self.exp_B = exp_B
         self.noise_B = noise_B
-        self.exp_e = exp_e
-        self.noise_e = noise_e
 
+
+    def to_subbands(self, x):
+        # (J, n_sub) array -> torch tensor (J, n_sub, 1, ..., 1)
+        # so that x[j] broadcasts on the details D[j] : (n_ens, C, n_sub, n_1, ..., n_d)
+        x = np.asarray(x)
+        return torch.tensor(x, dtype=torch.float32).reshape(x.shape + (1,) * int(self.dim))
 
     def intermittency(self,lepsi_real, intermittency = True):
         if intermittency:
