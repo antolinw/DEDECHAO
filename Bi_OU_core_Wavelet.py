@@ -15,57 +15,67 @@ def run_simulation_W(cfg):
     # -------------------------
     # Initialization
     # -------------------------
-    lepsi_A, lepsi_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
-    epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
-    if cfg.new_spTimeGMC:
-        B_A, B_D = wavelet_CMG_noise(epsi_t,cfg)
-    else:
-        B_A, B_D = wavelet_noise(cfg)
+    run_init_w(cfg)
+
     match cfg.output_type:
         case 2:
             stream_z[0:]\
-                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+                = CMG_velocity_W(cfg, intermittency = (not cfg.new_spTimeGMC) )
         case 1:
             V_x[0,:], V_y[0,:]\
-                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+                = CMG_velocity_W(cfg, intermittency = (not cfg.new_spTimeGMC) )
         case 0:
             V_x[0,:], V_y[0,:], V_z[0,:], stream_z[0:], vort_z[0:], epsi[0,:]\
-                = CMG_velocity_W(B_A, B_D,epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+                = CMG_velocity_W(cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     # -------------------------
     # Time loop
     # -------------------------
     for t in range(cfg.N_steps - 1):
-
-        # ---- OU process for B ----
-        if cfg.new_spTimeGMC:
-            _, noise_B_D = wavelet_CMG_noise(epsi_t,cfg)
-        else:
-            _, noise_B_D = wavelet_noise(cfg)
-        B_D = wavelet_ou_update(B_D, cfg.exp_B, cfg.noise_B, noise_B_D)
-
-        # ---- OU process for log-epsilon ----
-        _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
-        lepsi_D = wavelet_ou_update(lepsi_D, cfg.exp_B, cfg.noise_B, noise_e_D)
-        epsi_t = epsilon(lepsi_A, lepsi_D,cfg)
+        run_1step_w(cfg)
 
         # ---- Reconstruction & velocity ----
         match cfg.output_type:
             case 2:
                 stream_z[t+1,:]\
                             = CMG_velocity_W(
-                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+                    cfg, intermittency = (not cfg.new_spTimeGMC) )
             case 1:
                 V_x[t+1,:], V_y[t+1,:] \
                             = CMG_velocity_W(
-                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
+                    cfg, intermittency = (not cfg.new_spTimeGMC) )
             case 0:
                 V_x[t+1,:], V_y[t+1,:], V_z[t+1,:], stream_z[t+1,:] , vort_z[t+1,:], epsi[t+1,:] \
                             = CMG_velocity_W(
-                    B_A, B_D, epsi_t,cfg, intermittency = (not cfg.new_spTimeGMC) )
-
+                    cfg, intermittency = (not cfg.new_spTimeGMC) )
 
     return cfg.outputs(V_x, V_y, V_z, stream_z, vort_z, epsi)
+
+def run_init_w(cfg):
+    cfg.lepsi_hat =  cfg.zeroField()
+    cfg.epsi_t = cfg.zeroField()
+    cfg.B_hat = cfg.zeroField()
+
+    cfg.lepsi_A, cfg.lepsi_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
+    cfg.epsi_t = epsilon(cfg.lepsi_A, cfg.lepsi_D,cfg)
+    if cfg.new_spTimeGMC:
+        cfg.B_A, cfg.B_D = wavelet_CMG_noise(cfg.epsi_t,cfg)
+    else:
+        cfg.B_A, cfg.B_D = wavelet_noise(cfg)
+
+def run_1step_w(cfg):
+    # ---- OU process for B ----
+    if cfg.new_spTimeGMC:
+        _, noise_B_D = wavelet_CMG_noise(cfg.epsi_t,cfg)
+    else:
+        _, noise_B_D = wavelet_noise(cfg)
+    cfg.B_D = wavelet_ou_update(cfg.B_D, cfg.exp_B, cfg.noise_B, noise_B_D)
+
+    # ---- OU process for log-epsilon ----
+    _, noise_e_D = wavelet_colored_noise(cfg,cfg.E_epsi_kj, scalar = True)
+    cfg.lepsi_D = wavelet_ou_update(cfg.lepsi_D, cfg.exp_B, cfg.noise_B, noise_e_D)
+    cfg.epsi_t = epsilon(cfg.lepsi_A, cfg.lepsi_D,cfg)
+
 
 def to_dwt_format(field, cfg):
     # default format (N, N, n_ens), (N, N, N, n_ens) or (N, N, N, C, n_ens)
@@ -192,10 +202,10 @@ def epsilon(lepsi_A, lepsi_D,cfg):
         lepsi = lepsi[:,:,:,np.newaxis,:]
     return cfg.intermittency(lepsi) 
 
-def CMG_velocity_W(B_A, B_D, epsi,cfg, intermittency = True):
-    B = reconstruct_field(B_A, B_D, cfg)
-    Bepsi = cfg.CMG_from_noise(B,epsi, intermittency)
-    return velocity_from_noise(Bepsi,epsi,cfg)
+def CMG_velocity_W(cfg, intermittency = True):
+    B = reconstruct_field(cfg.B_A, cfg.B_D, cfg)
+    Bepsi = cfg.CMG_from_noise(B,cfg.epsi_t, intermittency)
+    return velocity_from_noise(Bepsi,cfg.epsi_t,cfg)
 
 def velocity_from_noise(Bepsi,epsi,cfg):
     stream = coloring_noise(cfg, cfg.E_stream_kj, Bepsi)
