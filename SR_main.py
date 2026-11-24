@@ -134,3 +134,45 @@ def super_resolution(field, factor, k_injection, variance_red = 200):
     IM_U, _ = moduler_bruit(U_LR_up, fieldx, k_c= k_injection, alpha= -slope, dk=1.0)  # factor = 16
 
     return IM_U
+
+def load_uv_field(filename, remove_mean=True, normalize=False):
+    """
+    Lit un fichier texte (x, y, U, V) et reconstruit les champs sur une grille 2D.
+
+    Paramètres
+    ----------
+    filename    : str   chemin du fichier .txt
+    remove_mean : bool  soustrait la moyenne à U et V
+    normalize   : bool  divise par l'écart-type (après soustraction de la moyenne)
+
+    Retourne
+    -------
+    X, Y : grilles 2D (shape (ny, nx))
+    U, V : champs 2D (shape (ny, nx))
+    """
+    # 1. Lecture
+    data = np.loadtxt(filename)
+    x, y, U, V = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
+
+    # 2. Dimensions de la grille
+    x_unique = np.unique(x)
+    y_unique = np.unique(y)
+    nx, ny = len(x_unique), len(y_unique)
+
+    # 3. Reconstruction (tri par y puis x pour être robuste à l'ordre du fichier)
+    order = np.lexsort((x, y))  # tri principal sur y, secondaire sur x
+    U_matrix = U[order].reshape((ny, nx))
+    V_matrix = V[order].reshape((ny, nx))
+
+    # 4. Grilles X, Y
+    X, Y = np.meshgrid(x_unique, y_unique)
+
+    # 5. Post-traitement optionnel
+    if remove_mean:
+        U_matrix = U_matrix - U_matrix.mean()
+        V_matrix = V_matrix - V_matrix.mean()
+    if normalize:
+        U_matrix = U_matrix / U_matrix.std()
+        V_matrix = V_matrix / V_matrix.std()
+
+    return X, Y, U_matrix, V_matrix
