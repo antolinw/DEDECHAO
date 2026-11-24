@@ -1,0 +1,3 @@
+[submodule "genCHAO"]
+	path = genCHAO
+	url = https://github.com/antolinw/genCHAO.git
