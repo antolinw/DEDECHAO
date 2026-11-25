@@ -47,6 +47,88 @@ def filtre_image_k(image, dx, dy, k_coupure, passe_haut=True):
 
     return image_filtree
 
+def radial_average(field_2d, k, k_bins):
+    """Somme radiale d'un champ 2D (ex: |FFT|^2) sur des couronnes de k,
+    normalisée par dk pour obtenir une densité spectrale E(k)."""
+    dk = k_bins[1] - k_bins[0]
+    E_1d = np.zeros(len(k_bins))
+    for idx, k_i in enumerate(k_bins):
+        mask = (k >= k_i) & (k < k_i + dk)
+        if mask.any():
+            E_1d[idx] = field_2d[mask].sum() / dk
+    return E_1d
+
+# Version dans QGMLU-DEDECHAO
+
+def moduler_bruit(image, bruit, k_c, alpha, dk=1.0):
+    """
+    image : array 2D réel, l'écoulement original
+    bruit : array 2D réel, ton bruit déjà filtré (pas de basse fréquence)
+    k_c   : nombre d'onde de coupure (là où on veux raccorder les pentes)
+    alpha : pente théorique cible (E_theo(k) ~ k^-alpha)
+    """
+
+    N = image.shape[0]
+    assert bruit.shape == image.shape
+
+    # --- grille de nombre d'onde ---
+    kx = np.fft.fftfreq(N) * N
+    ky = np.fft.fftfreq(N) * N
+    KX, KY = np.meshgrid(kx, ky, indexing='ij')
+    k = np.sqrt(KX**2 + KY**2)
+
+    #k_max = kx.max()
+    k_max = k.max()
+    k_bins = np.arange(0, k_max, dk)
+
+    # --- FFT de l'image et du bruit ---
+    I_hat = np.fft.fft2(image)
+    B_hat = np.fft.fft2(bruit)
+
+    E_orig_2d  = np.abs(I_hat)**2
+    E_bruit_2d = np.abs(B_hat)**2
+
+    E_orig_1d  = radial_average(E_orig_2d,  k, k_bins)
+    E_bruit_1d = radial_average(E_bruit_2d, k, k_bins)
+
+    # --- spectre théorique cible, raccordé en k_c ---
+
+    idx_c = int((k_c - k_bins[0]) // dk)
+    idx_c = np.clip(idx_c, 0, len(k_bins) - 1)
+    
+    #idx_c = np.searchsorted(k_bins, k_c)
+    A = E_orig_1d[idx_c] * k_c**alpha if E_orig_1d[idx_c] > 0 else E_bruit_1d[idx_c] * k_c**alpha
+    E_theo_1d = A * np.where(k_bins > 0, k_bins, np.inf)**(-alpha)
+
+    # --- résidu : ce qui manque par rapport à l'image ---
+    R_1d = np.maximum(E_theo_1d - E_orig_1d, 0)
+    R_1d[k_bins < k_c] = 0   # rien à ajouter en dessous de k_c
+
+    # --- facteur de modulation M(k) = sqrt(R / E_bruit), en évitant les divisions par 0 ---
+    M_1d = np.zeros_like(R_1d)
+    valid = E_bruit_1d > 1e-9
+    ratio = np.zeros_like(R_1d)
+    np.divide(R_1d, E_bruit_1d, out=ratio, where=valid)
+    #M_1d[valid] = np.sqrt(R_1d[valid] / E_bruit_1d[valid])
+    #M_1d = np.sqrt(R_1d / E_bruit_1d)
+    M_1d = np.sqrt(ratio)
+    
+    # si le bruit n'a aucune énergie à un k donné mais qu'on en voudrait -> impossible de créer
+    # de l'énergie avec un facteur multiplicatif, on laisse M=0 
+
+    # --- passage du filtre radial 1D vers la grille 2D ---
+    k_centers = k_bins + dk/2
+    M_2d = np.interp(k, k_bins, M_1d)
+
+    # --- application du filtre au bruit (multiplicatif, dans Fourier) ---
+    B_hat_modulé = B_hat * M_2d
+
+    bruit_modulé = np.real(np.fft.ifft2(B_hat_modulé))
+
+    image_finale = image + bruit_modulé
+
+    return image_finale, bruit_modulé
+
 def lin_slope_fit(kr, psd, kr_cut):
     k_min_fit = kr[2]          # évite l'injection)
     k_max_fit = kr_cut         # jusqu'à la coupure
