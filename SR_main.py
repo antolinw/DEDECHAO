@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.signal.windows import tukey
 from SR_plots import isotropic_psd_2d 
-
+from dataclasses import replace
+from genCHAO.Bi_OU_core import run_simulation
+from genCHAO.sim_config import Parameters   
 
 def filtre_image_k(image, dx, dy, k_coupure, passe_haut=True):
     """
@@ -125,7 +127,8 @@ def super_resolution(field, factor, k_injection, variance_red = 200):
     U_LR, U_LR_up, slope, offset = up_and_down_sample(field, factor)
 
     # Generate noise of the wanted slope
-    cfg = Parameters(rho_s = -slope, output_type=1)
+    cfg0 = Parameters()
+    cfg = replace(cfg0, rho_s=-slope, N_steps=1)
     V_x, V_y = run_simulation(cfg)
     fieldx = V_x[0,:,:,0] - V_x[0,:,:,0].mean()
     fieldx /= (fieldx.std() * variance_red)

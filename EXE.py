@@ -1,3 +1,7 @@
+
+import os
+import sys
+sys.path.append('./genCHAO')
 import numpy as np
 import matplotlib.pyplot as plt
 from SR_main import load_uv_field, super_resolution
