@@ -18,11 +18,20 @@ print('field loaded, moving to super-resolution')
 
 ###################### Super-resolution ######################
 
-Super_resolved_test = super_resolution(U_matrix, factor = 32, k_injection = 5)
-print(Super_resolved_test.shape)
+Super_resolved, U_LR = super_resolution(U_matrix, factor = 32, k_injection = 5)
 
 ###################### Plotting ######################
 
-plt.imshow(Super_resolved_test)
-plt.colorbar()
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+
+ax1.imshow(U_matrix)
+ax1.set_title('Original')
+
+ax2.imshow(U_LR)
+ax2.set_title('Low Resolution')
+
+ax3.imshow(Super_resolved)
+ax3.set_title('Super resolved')
+
+plt.tight_layout()
 plt.show()

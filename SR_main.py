@@ -218,7 +218,7 @@ def super_resolution(field, factor, k_injection, variance_red = 200):
     # Modulating
     IM_U, _ = moduler_bruit(U_LR_up, fieldx, k_c= k_injection, alpha= -slope, dk=1.0)  # factor = 16
 
-    return IM_U
+    return IM_U, U_LR
 
 def load_uv_field(filename, remove_mean=True, normalize=False):
     """
